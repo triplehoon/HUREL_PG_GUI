@@ -1,0 +1,10 @@
+﻿Error Code 정리
+
+JJR0000: Plan file의 index를 -2 ~ +2 해보았으나, Plan과 Log 정합 불가능.
+         Tolerance를 충분히 주거나 Plan 또는 Log 의 유효성을 검사할 것.
+JJR0001: PG 데이터와 PlanLog 데이터의 갯수가 맞지 않음.
+         PG 데이터가 continous에서 spot으로 잘못 잘렸을 가능성이 높음.
+JJR0002:
+JJR0003: Spot scanning proton therapy post processing mode에서 analysis start를 눌렀는데 error 발생한 경우.
+JJR0004: findpeak 함수에서 에러가 발생한 경우. 피크가 하나라도 나와야 하는데, 에러가 떴다는 것은 distribution이 이상함을 의미함.
+JJR0005: Positioning System View가 열리지 않을 때

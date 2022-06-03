@@ -1,0 +1,103 @@
+﻿<Window x:Class="HUREL_PG_GUI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        
+        xmlns:viewModel="clr-namespace:HUREL_PG_GUI.ViewModels"
+        xmlns:view="clr-namespace:HUREL_PG_GUI.Views"
+
+        xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+        xmlns:syncfusionskin ="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+        syncfusionskin:SfSkinManager.Theme="{syncfusionskin:SkinManagerExtension ThemeName=Metro}"        
+                
+        mc:Ignorable="d"
+        Title="Proton Beam Range Verification Program" Height="900" Width="1600" Icon="symbol_hurel.png" 
+        >
+    
+    <Window.DataContext>
+        <viewModel:VM_MainWindow/>
+    </Window.DataContext>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!--MenuTab-->
+        <Grid Grid.Row="0" x:Name="MenuTab" Background="#FFEAEAEA" Visibility="{Binding IsViewSelected, Converter={StaticResource Conv_BoolToVis}}">
+            <Menu>
+                <!--MenuBar 1번째-->
+                <MenuItem Header="File">
+                    <MenuItem Header="New" Command="{Binding}"/>
+                    <Separator/>
+                    <MenuItem Header="Load" Command="{Binding}"/>
+                    <Separator/>
+                    <MenuItem Header="Save" Command="{Binding}"/>
+                    <MenuItem Header="Save as" Command="{Binding}"/>
+                    <Separator/>
+                    <MenuItem Header="Exit" Command="{Binding}"/>
+                </MenuItem>
+
+                <!--MenuBar 2번째-->
+                <MenuItem Header="Operation Mode">
+                    <MenuItem Header="Home Screen" Command="{Binding PBSselectViewCommand}"/>
+                    <Separator/>
+                    <MenuItem Header="Real-time Range Verification Mode" Command="{Binding SpotScanningViewCommand}"/>
+                    <MenuItem Header="Post-processing Mode" Command="{Binding PostProcessingViewCommand}"/>
+                    
+                    <MenuItem Header="Positioning System Mode" Command="{Binding PositioningSystemViewCommand}"/>
+                    <MenuItem Header="Calibration Mode">
+                        <MenuItem Header="Energy Calibration" Command="{Binding EnergyCalibrationViewCommand}"/>
+                        <MenuItem Header="Laser Calibration" Command="{Binding LaserCalibrationViewCommand}"/>
+                    </MenuItem>
+                    <Separator/>
+                    <MenuItem Header="DAQ Setting Mode" Command="{Binding DAQsettingViewCommand}"/>
+                </MenuItem>
+
+                <!--MenuBar 3번째-->
+                <MenuItem Header="Help">
+                    <MenuItem Header="User Manual" Command="{Binding}"/>
+                    <MenuItem Header="Program Information" Command="{Binding}"/>
+                </MenuItem>
+            </Menu>
+        </Grid>
+
+        <!--ButtonTab-->
+        <Grid Grid.Row="0" Grid.RowSpan="2" x:Name="ButtonTab" Background="white" Visibility="{Binding IsViewSelected, Converter={StaticResource Conv_BoolToVis_Rev}}">
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Select Proton Therapy System(Temp)"
+                           FontSize="70" FontWeight="Bold" Margin="0, 200, 0, 0"
+                           VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0, 150, 0, 0">
+                    <Button Content="Spot Scanning Mode" Style="{StaticResource Button_MainWindow}" Command="{Binding SpotScanningViewCommand}"/>
+                    <Button Content="Line Scanning Mode" Style="{StaticResource Button_MainWindow}" Command="{Binding LineScanningViewCommand}"/>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+        
+        
+        <!--PageTab-->
+        <Grid Grid.Row="1" Background="#FFEAEAEA" Visibility="{Binding SelectedView, Converter={StaticResource Conv_PageVis}, ConverterParameter=SpotScanningView}">
+            <view:UC_SpotScanningView/>
+        </Grid>
+        
+        <Grid Grid.Row="1" Background="#FFEAEAEA" Visibility="{Binding SelectedView, Converter={StaticResource Conv_PageVis}, ConverterParameter=LineScanningView}">
+            <view:UC_LineScanningView/>
+        </Grid>
+        
+        <!--<Grid Grid.Row="1" Background="#FFEAEAEA" Visibility="{Binding SelectedView, Converter={StaticResource Conv_PageVis}, ConverterParameter=PositioningSystemView}">
+            --><!--<view:UC_PositioningSystemView/>--><!--
+        </Grid>
+
+        <Grid Grid.Row="1" Background="#FFEAEAEA" Visibility="{Binding SelectedView, Converter={StaticResource Conv_PageVis}, ConverterParameter=EnergyCalibrationmView}">
+            --><!--<view:UC_EnergyCalibrationView/>--><!--
+        </Grid>-->       
+
+
+
+
+
+    </Grid>
+</Window>

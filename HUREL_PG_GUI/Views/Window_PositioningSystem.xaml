@@ -1,0 +1,594 @@
+﻿<Window x:Class="HUREL_PG_GUI.Views.Window_PositioningSystem"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        
+        xmlns:viewmodel="clr-namespace:HUREL_PG_GUI.ViewModels"
+        
+        xmlns:sf="http://schemas.syncfusion.com/wpf"
+        xmlns:syncfusionskin ="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+              syncfusionskin:SfSkinManager.Theme="{syncfusionskin:SkinManagerExtension ThemeName=Metro}"
+        
+        xmlns:local="clr-namespace:HUREL_PG_GUI.Views"
+        mc:Ignorable="d"
+        Title="Window_PositioningSystem" Height="900" Width="1600"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.DataContext>
+        <viewmodel:VM_PositioningSystem/>
+    </Window.DataContext>
+
+    <Grid Background="#FFEAEAEA">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="White" CornerRadius="5" Margin="10, 10, 10, 5">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Style="{StaticResource TBlock_Positioning1}" Text="Motor Status" Margin="20, 15, 20, 0"/>
+
+                    <Grid Grid.Row="1" Margin="50, 10, 10, 10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="0.5*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Margin="10" Text="Port No." Style="{StaticResource TBlock_Positioning2}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Margin="10" Text="Status" Style="{StaticResource TBlock_Positioning2}"/>
+
+                        <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding VMcomboBoxPortNo}" SelectedItem="{Binding SelectedcomboBoxPortNo}" Margin="0, 10, 10, 10"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="Motor Connected" Style="{StaticResource TBlock_Positioning2}"/>
+
+                        <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" Margin="10" Command="{Binding Positioning_ConnectCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource Button_PositioningSystem}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsMotorConnected}" Value="True">
+                                            <Setter Property="Background" Value="Gray"/>
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsMotorConnected}" Value="False">
+                                            <Setter Property="Background" Value="#FF00457E"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding IsMotorConnected, Converter={StaticResource Conv_BoolToString_MotorConnection}}" FontSize="20"
+                                               Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button.Content>
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Background="White" CornerRadius="5" Margin="10, 10, 10, 5">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Style="{StaticResource TBlock_Positioning1}" Text="Tracker Status" Margin="20, 15, 20, 0"/>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.5*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid Grid.Column="0" Margin="40, 10, 30, 0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4" HorizontalAlignment="Center" Text="Tracker No." FontWeight="Bold" Style="{StaticResource TBlock_Positioning2}"/>
+                            <TextBlock Grid.Row="0" Grid.Column="4" Grid.ColumnSpan="4" HorizontalAlignment="Center" Text="Base Station No." FontWeight="Bold" Style="{StaticResource TBlock_Positioning2}"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center" Text="1" Style="{StaticResource TBlock_Positioning2}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" Text="2" Style="{StaticResource TBlock_Positioning2}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="2" HorizontalAlignment="Center" Text="3" Style="{StaticResource TBlock_Positioning2}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="3" HorizontalAlignment="Center" Text="4" Style="{StaticResource TBlock_Positioning2}"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="4" HorizontalAlignment="Center" Text="1" Style="{StaticResource TBlock_Positioning2}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="5" HorizontalAlignment="Center" Text="2" Style="{StaticResource TBlock_Positioning2}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="6" HorizontalAlignment="Center" Text="3" Style="{StaticResource TBlock_Positioning2}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="7" HorizontalAlignment="Center" Text="4" Style="{StaticResource TBlock_Positioning2}"/>
+
+                            <Ellipse Grid.Row="2" Grid.Column="0" Width="18" Height="18" Margin="5" Fill="Green"/>
+                            <Ellipse Grid.Row="2" Grid.Column="1" Width="18" Height="18" Margin="5" Fill="Green"/>
+                            <Ellipse Grid.Row="2" Grid.Column="2" Width="18" Height="18" Margin="5" Fill="Green"/>
+                            <Ellipse Grid.Row="2" Grid.Column="3" Width="18" Height="18" Margin="5" Fill="Green"/>
+
+                            <Ellipse Grid.Row="2" Grid.Column="4" Width="18" Height="18" Margin="5" Fill="Green"/>
+                            <Ellipse Grid.Row="2" Grid.Column="5" Width="18" Height="18" Margin="5" Fill="Green"/>
+                            <Ellipse Grid.Row="2" Grid.Column="6" Width="18" Height="18" Margin="5" Fill="Green"/>
+                            <Ellipse Grid.Row="2" Grid.Column="7" Width="18" Height="18" Margin="5" Fill="Green"/>
+                        </Grid>
+
+                        <Button Grid.Column="1" Margin="10, 10, 30, 10" Command="{Binding Positioning_ConnectCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource Button_PositioningSystem}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsMotorConnected}" Value="True">
+                                            <Setter Property="Background" Value="Gray"/>
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsMotorConnected}" Value="False">
+                                            <Setter Property="Background" Value="#FF00457E"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Coordinate Calibration" FontSize="20" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button.Content>
+                        </Button>
+                    </Grid>
+
+                    <Grid Grid.Row="2" Margin="40, 0, 0, 0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition Width="4*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="10" Text="Last Calibration " FontWeight="Bold" Style="{StaticResource TBlock_Positioning2}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Margin="10" Text="Done 12 hours ago" Style="{StaticResource TBlock_Positioning2}"/>
+
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="2*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="White" CornerRadius="5" Margin="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Style="{StaticResource TBlock_Positioning1}" Text="Motor Status" Margin="20, 15, 20, 0"/>
+
+                    <Grid Grid.Row="1" Margin="15, 0, 15, 15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="4*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid Grid.Column="0" Margin="15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="3" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Text="   Position in&#xd;PPS coordinate" FontSize="18" FontWeight="Bold" Foreground="Black"/>
+                            <TextBlock Grid.Row="0" Grid.Column="4" Grid.ColumnSpan="3" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Text="Position relative&#xd;    to trolley" FontSize="18" FontWeight="Bold" Foreground="Black"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="  Current&#xd;Coordinate" FontSize="15" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Black"/>
+                            <!--<TextBlock Grid.Row="1" Grid.Column="2" Text="  Rel.&#xd;Preset" FontSize="18" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Black"/>-->
+                            <TextBlock Grid.Row="1" Grid.Column="2" Text="   Target&#xd;Coordinate" FontSize="15" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Black"/>
+                            <TextBlock Grid.Row="1" Grid.Column="3" Text="Calculated&#xd; Variance" FontSize="15" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Black"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="4" Text="  Current&#xd;Coordinate" FontSize="15" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Black"/>
+                            <TextBlock Grid.Row="1" Grid.Column="5" Text=" Target&#xd;Variance" FontSize="15" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Black"/>
+                            <TextBlock Grid.Row="1" Grid.Column="6" Text="Calculated&#xd;Coordinate" FontSize="15" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Black"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="7" Text="Error" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Black"/>
+
+
+
+                            <!--X (mm)-->
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="X (mm)" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Black"/>
+                            
+                            <!--<Border Grid.Row="2" Grid.Column="1" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding PPS_CurrentCoordinate_X}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>
+                            <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding PPS_InputCoordinate_X}" FontSize="18" Margin="10"/>
+                            <Border Grid.Row="2" Grid.Column="3" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding PPS_CalculatedVariance_X}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>-->
+
+                            <Border Grid.Row="2" Grid.Column="4" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding Trolley_CurrentCoordinate_X}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>
+                            <TextBox Grid.Row="2" Grid.Column="5" Text="{Binding Trolley_InputVariance_X}" FontSize="18" Margin="10"/>
+                            <!--<Border Grid.Row="2" Grid.Column="6" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding Trolley_CalculatedCoordinate_X}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>-->
+
+
+                            <!--Y (mm)-->
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Y (mm)" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Black"/>
+
+                            <!--<Border Grid.Row="3" Grid.Column="1" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding PPS_CurrentCoordinate_Y}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>
+                            <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding PPS_InputCoordinate_Y}" FontSize="18" Margin="10"/>
+                            <Border Grid.Row="3" Grid.Column="3" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding PPS_CalculatedVariance_Y}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>-->
+
+                            <Border Grid.Row="3" Grid.Column="4" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding Trolley_CurrentCoordinate_Y}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>
+                            <TextBox Grid.Row="3" Grid.Column="5" Text="{Binding Trolley_InputVariance_Y}" FontSize="18" Margin="10"/>
+                            <!--<Border Grid.Row="3" Grid.Column="6" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding Trolley_CalculatedCoordinate_Y}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>-->
+
+
+
+                            <!--Z (mm)-->
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Z (mm)" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Black"/>
+
+                            <!--<Border Grid.Row="4" Grid.Column="1" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding PPS_CurrentCoordinate_Z}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>
+                            <TextBox Grid.Row="4" Grid.Column="2" Text="{Binding PPS_InputCoordinate_Z}" FontSize="18" Margin="10"/>
+                            <Border Grid.Row="4" Grid.Column="3" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding PPS_CalculatedVariance_Z}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>-->
+
+                            <Border Grid.Row="4" Grid.Column="4" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding Trolley_CurrentCoordinate_Z}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>
+                            <TextBox Grid.Row="4" Grid.Column="5" Text="{Binding Trolley_InputVariance_Z}" FontSize="18" Margin="10"/>
+                            <!--<Border Grid.Row="4" Grid.Column="6" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding Trolley_CalculatedCoordinate_Z}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>-->
+
+
+                            <!--Tilt(Roll)-->
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Tilt (°)&#xd; Roll" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Black"/>
+
+                            <!--<Border Grid.Row="5" Grid.Column="1" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding PPS_CurrentCoordinate_Tilt}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>
+                            <TextBox Grid.Row="5" Grid.Column="2" Text="{Binding PPS_InputCoordinate_Tilt}" FontSize="18" Margin="10"/>
+                            <Border Grid.Row="5" Grid.Column="3" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding PPS_CalculatedVariance_Tilt}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>-->
+
+                            <Border Grid.Row="5" Grid.Column="4" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding Trolley_CurrentCoordinate_Tilt}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>
+                            <TextBox Grid.Row="5" Grid.Column="5" Text="{Binding Trolley_InputVariance_Tilt}" FontSize="18" Margin="10"/>
+                            <!--<Border Grid.Row="5" Grid.Column="6" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding Trolley_CalculatedCoordinate_Tilt}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>-->
+
+
+                            <!--Pivot(Pitch)-->
+                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Pivot (°)&#xd;  Pitch" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Black"/>
+
+                            <!--<Border Grid.Row="6" Grid.Column="1" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding PPS_CurrentCoordinate_Pivot}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>
+                            <TextBox Grid.Row="6" Grid.Column="2" Text="{Binding PPS_InputCoordinate_Pivot}" FontSize="18" Margin="10"/>
+                            <Border Grid.Row="6" Grid.Column="3" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding PPS_CalculatedVariance_Pivot}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>-->
+
+                            <Border Grid.Row="6" Grid.Column="4" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding Trolley_CurrentCoordinate_Pivot}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>
+                            <TextBox Grid.Row="6" Grid.Column="5" Text="{Binding Trolley_InputVariance_Pivot}" FontSize="18" Margin="10"/>
+                            <!--<Border Grid.Row="6" Grid.Column="6" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding Trolley_CalculatedCoordinate_Pivot}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>-->
+
+
+                            <!--Swivel(Yaw)-->
+                            <TextBlock Grid.Row="7" Grid.Column="0" Text="Swivel (°)&#xd;   Yaw" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Black"/>
+
+                            <!--<Border Grid.Row="7" Grid.Column="1" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding PPS_CurrentCoordinate_Swivel}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>
+                            <TextBox Grid.Row="7" Grid.Column="2" Text="{Binding PPS_InputCoordinate_Swivel}" FontSize="18" Margin="10"/>
+                            <Border Grid.Row="7" Grid.Column="3" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding PPS_CalculatedVariance_Swivel}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>-->
+
+                            <Border Grid.Row="7" Grid.Column="4" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding Trolley_CurrentCoordinate_Swivel}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>
+                            <TextBox Grid.Row="7" Grid.Column="5" Text="{Binding Trolley_InputVariance_Swivel}" FontSize="18" Margin="10"/>
+                            <!--<Border Grid.Row="7" Grid.Column="6" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding Trolley_CalculatedCoordinate_Swivel}" Style="{StaticResource TBlock_Positioning4}"/>
+                            </Border>-->
+                            
+
+
+
+                            <!--Error-->
+                            <!--<Border Grid.Row="2" Grid.Column="7" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding TBlock_Error_X}" Style="{StaticResource InfoText4}" Margin="5, 0, 0, 0" />
+                            </Border>
+                            <Border Grid.Row="3" Grid.Column="7" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding TBlock_Error_Y}" Style="{StaticResource InfoText4}" Margin="5, 0, 0, 0" />
+                            </Border>
+                            <Border Grid.Row="4" Grid.Column="7" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding TBlock_Error_Z}" Style="{StaticResource InfoText4}" Margin="5, 0, 0, 0" />
+                            </Border>
+                            <Border Grid.Row="5" Grid.Column="7" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding TBlock_Error_Tilt}" Style="{StaticResource InfoText4}" Margin="5, 0, 0, 0" />
+                            </Border>
+                            <Border Grid.Row="6" Grid.Column="7" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding TBlock_Error_Pivot}" Style="{StaticResource InfoText4}" Margin="5, 0, 0, 0" />
+                            </Border>                            
+                            <Border Grid.Row="7" Grid.Column="7" Margin="10" BorderBrush="#FF00457E" BorderThickness="1">
+                                <TextBlock Text="{Binding TBlock_Error_Swivel}" Style="{StaticResource InfoText4}" Margin="5, 0, 0, 0" />
+                            </Border>-->
+
+                        </Grid>
+
+                        <Grid Grid.Column="1" Margin="0, 0, 0, 0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!--Servo Mode On-->
+                            <Button Grid.Row="0" Margin="10" Command="{Binding Positioning_ServoONOFFCommand}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource Button_PositioningSystem}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsServoModeON}" Value="True">
+                                                <Setter Property="Background" Value="Gray"/>
+                                                <Setter Property="Foreground" Value="Black"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsServoModeON}" Value="False">
+                                                <Setter Property="Background" Value="#FF00457E"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <Button.Content>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding IsServoModeON, Converter={StaticResource Conv_BoolToString_ServoON}}" FontSize="20"
+                                                   Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+
+                            <!--Alarm Reset-->
+                            <Button Grid.Row="1" Margin="10" Command="{Binding Positioning_AlarmResetCommand}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource Button_PositioningSystem}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding }" Value="True">
+                                                <Setter Property="Background" Value="Gray"/>
+                                                <Setter Property="Foreground" Value="Black"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding }" Value="False">
+                                                <Setter Property="Background" Value="#FF00457E"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <Button.Content>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Alarm Reset" FontSize="20"
+                                               Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+
+                            <!--Empty-->
+                            <!--<Button Grid.Row="2" Margin="10" Command="{Binding }">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ButtonDesignHYU}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding }" Value="True">
+                                                <Setter Property="Background" Value="Gray"/>
+                                                <Setter Property="Foreground" Value="Black"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding }" Value="False">
+                                                <Setter Property="Background" Value="#FF00457E"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <Button.Content>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="SetandClear&#xd;Parameter" FontSize="20"
+                                                   Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>-->
+
+                            <TextBox Grid.Row="2" Margin="10" Text="{Binding TBox_speed}"/>
+
+
+                            <!--Drive Command: Sequentially Drive-->
+                            <!--<Button Grid.Row="3" Margin="10" Command="{Binding Positioning_DriveCommand_SequentialTemp}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ButtonDesignHYU}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding }" Value="True">
+                                                <Setter Property="Background" Value="Gray"/>
+                                                <Setter Property="Foreground" Value="Black"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding }" Value="False">
+                                                <Setter Property="Background" Value="#FF00457E"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <Button.Content>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Sequential&#xd;    Drive" FontSize="20"
+                                               Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>-->
+
+
+                            <!--Drive Command: Absolute PPS coordinate-->
+                            <!--<Button Grid.Row="4" Margin="10" Command="{Binding Positioning_DriveCommand_AbsPPS}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ButtonDesignHYU}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding }" Value="True">
+                                                <Setter Property="Background" Value="Gray"/>
+                                                <Setter Property="Foreground" Value="Black"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding }" Value="False">
+                                                <Setter Property="Background" Value="#FF00457E"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <Button.Content>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Drive(Abs PPS&#xd;Coordinate)" FontSize="20"
+                                               Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>-->
+
+
+                            <!--Drive Command: Multi-Axis drive-->
+                            <Button Grid.Row="5" Margin="10" Command="{Binding Positioning_DriveCommand}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource Button_PositioningSystem}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding }" Value="True">
+                                                <Setter Property="Background" Value="Gray"/>
+                                                <Setter Property="Foreground" Value="Black"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding }" Value="False">
+                                                <Setter Property="Background" Value="#FF00457E"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <Button.Content>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Drive" FontSize="20"
+                                               Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+
+
+                            <!--Stop Command-->
+                            <Button Grid.Row="6" Margin="10" Command="{Binding Positioning_StopCommand}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource Button_PositioningSystem}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding }" Value="True">
+                                                <Setter Property="Background" Value="Gray"/>
+                                                <Setter Property="Foreground" Value="Black"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding }" Value="False">
+                                                <Setter Property="Background" Value="#FF00457E"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <Button.Content>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Stop" FontSize="20"
+                                               Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Background="White" CornerRadius="5" Margin="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Style="{StaticResource TBlock_Positioning1}" Text="CT reconstructed View" Margin="20, 15, 20, 0"/>
+
+                    <Border Grid.Row="1" Background="White" CornerRadius="20" Margin="30, 20, 30, 20">
+
+                    </Border>
+
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>    
+</Window>

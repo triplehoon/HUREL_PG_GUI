@@ -1,0 +1,433 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    
+                    xmlns:view="clr-namespace:HUREL_PG_GUI.Views"
+                    
+                    
+                    xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+                    xmlns:syncfusionskin ="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF">
+
+    <ResourceDictionary.MergedDictionaries>
+        <!--MahApps.Metro resource dictionaries. Make sure that all file names are Case Sensitive!-->
+        <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
+        <!--Theme setting-->
+        <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Light.Blue.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    
+    
+    <view:BooleanToVisibilityConverter x:Key="Conv_BoolToVis"/>
+    <view:BooleanToVisibilityConverter_Rev x:Key="Conv_BoolToVis_Rev"/>
+    <view:PageVisibilityConverter x:Key="Conv_PageVis"/>
+    
+    <view:EnumToVisConverter x:Key="Conv_EnumToVis"/>
+    <view:BooleanToInverseBooleanConverter x:Key="Conv_BoolToInverseBool"/>
+    <view:BooleanToColorConverter x:Key="Conv_BoolToColor"/>
+    
+    <view:RadioButtonToViewChangeConverter x:Key="Conv_RadioButtonToVis"/>
+    <view:StackPanelVisibilityConverter x:Key="Conv_EnumToStackPanelVis"/>
+
+    <view:BooleanToStringConverter x:Key="Conv_BoolToString_MotorConnection" FalseValue="Connect" TrueValue="DisConnect"/>
+    <view:BooleanToStringConverter x:Key="Conv_BoolToString_ServoON" FalseValue="Servo ON" TrueValue="Servo OFF"/>
+
+
+    <!--Button Dictionary-->
+    <Style TargetType="{x:Type Button}" x:Key="Default_Button"/>
+    
+    <Style TargetType="{x:Type Button}" x:Key="Button_MainWindow" BasedOn="{StaticResource Default_Button}">
+        <Setter Property="Background" Value="#FF00457E"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="FontSize" Value="40"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Height" Value="300"/>
+        <Setter Property="Width" Value="500"/>
+        <Setter Property="Margin" Value="50, 0, 50, 0"/>
+        <Style.Resources>
+            <Style TargetType="Border">
+                <Setter Property="CornerRadius" Value="30"/>
+            </Style>
+        </Style.Resources>
+    </Style>
+
+    <Style TargetType="{x:Type Button}" x:Key="Button_RealTime_DICOM" BasedOn="{StaticResource Default_Button}">
+        <Setter Property="Margin" Value="2, 10, 2, 10"/>
+        <Setter Property="BorderBrush" Value="Gray"/>
+        <Setter Property="BorderThickness" Value="0.5"/>
+        <Setter Property="Background" Value="White"/>
+    </Style>
+
+    <Style TargetType="{x:Type Button}" x:Key="Button_RealTime" BasedOn="{StaticResource Default_Button}">
+        <Setter Property="Margin" Value="2, 10, 2, 10"/>
+        <Setter Property="BorderBrush" Value="Gray"/>
+        <Setter Property="BorderThickness" Value="0.5"/>
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="Width" Value="100"/>
+    </Style>
+
+    <Style TargetType="{x:Type Button}" x:Key="Button_RealTime_Status" BasedOn="{StaticResource Default_Button}">
+        <Setter Property="Margin" Value="2, 10, 2, 10"/>
+        <Setter Property="BorderThickness" Value="5"/>
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="Width" Value="100"/>
+    </Style>
+
+    <Style TargetType="{x:Type Button}" x:Key="Button_PositioningSystem" BasedOn="{StaticResource Default_Button}">
+        <Setter Property="Background" Value="#FF00457E"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Padding" Value="5"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Style.Resources>
+            <Style TargetType="Border">
+                <Setter Property="CornerRadius" Value="5"/>
+            </Style>
+        </Style.Resources>
+    </Style>
+
+    <Style TargetType="{x:Type Button}" x:Key="Button_PostProcessing" BasedOn="{StaticResource Default_Button}">
+        <Setter Property="Background" Value="#FF00457E"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Margin" Value="10, 3, 3, 3"/>
+        <Setter Property="Width" Value="80"/>
+        <Style.Resources>
+            <Style TargetType="Border">
+                <Setter Property="CornerRadius" Value="5"/>
+            </Style>
+        </Style.Resources>
+    </Style>
+
+    <Style TargetType="{x:Type Button}" x:Key="Button_PostProcessing2" BasedOn="{StaticResource Default_Button}">
+        <Setter Property="Background" Value="#FF00457E"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Padding" Value="5"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Margin" Value="10, 3, 10, 3"/>
+        <Style.Resources>
+            <Style TargetType="Border">
+                <Setter Property="CornerRadius" Value="5"/>
+            </Style>
+        </Style.Resources>
+    </Style>
+
+
+
+    <!--TextBlock Dictionary-->
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_DICOM_1">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="5, 0, 0, 0"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_DICOM_2">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_Btn_RealTime">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_Aligned">
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_PositioningSystem">
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_PositioningSystem_LowerTab">
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="FontWeight" Value="Light"/>
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_PositioningSystem_LowerTab_Sort">
+        <Setter Property="FontSize" Value="20"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_PositioningSystem_Status">
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0, 0, 10, 0"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_Post_Title">
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="Margin" Value="10, 5, 10, 10"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="Black"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_Post_Title1">
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="Margin" Value="10, 5, 10, 5"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="Black"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_PostProcessing">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0, 0, 10, 0"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_PostProcessing1">
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="5, 0, 0, 0"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_PostProcessing2">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="Light"/>
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="FontStyle" Value="Italic"/>
+        <Setter Property="Margin" Value="5, 0, 0, 0"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_PostProcessing11">
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="5, 0, 0, 0"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_Positioning1">
+        <Setter Property="FontSize" Value="24"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0, 0, 0, 0"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_Positioning2">
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_Positioning3">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="TBlock_Positioning4">
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="5, 0, 0, 0"/>        
+    </Style>
+
+
+
+
+
+    <!--TextBox Dictionary-->
+    <Style TargetType="{x:Type TextBox}" x:Key="TBox_PositioningSystem_Status">
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBox}" x:Key="TBox_Positioning1">
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="10"/>
+    </Style>
+
+
+
+    <!--Border Dictionary-->
+    <Style TargetType="{x:Type Border}" x:Key="Border_PositioningSystem">
+        <Setter Property="Margin" Value="10"/>
+        <Setter Property="BorderBrush" Value="#FF00457E"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+    <Style TargetType="{x:Type Border}" x:Key="Border_PostProcessing">
+        <Setter Property="Margin" Value="5"/>
+        <Setter Property="BorderBrush" Value="#FF00457E"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+
+
+
+    <!--Syncfusion X, Y Axis-->
+    <DataTemplate x:Key="sf_Xaxis">
+        <TextBlock Text="X position (mm)" FontSize="18" FontWeight="Bold" Margin="0, -5, 0, 0"/>
+    </DataTemplate>
+
+    <DataTemplate x:Key="sf_Yaxis">
+        <TextBlock Text="Y position (mm)" FontSize="18" FontWeight="Bold" Margin="0, -5, 0, 0"/>
+    </DataTemplate>
+    
+    
+    
+    
+    
+    
+    <!--ColorBar-->
+    <!--<syncfusion:ColorMappingCollection x:Key="ColorBar_BeamRangeMap">
+        <syncfusion:ColorMapping Value="-10" Color="#000083"/>
+        <syncfusion:ColorMapping Value="-8" Color="#0119CD"/>
+        <syncfusion:ColorMapping Value="-6" Color="#1042FB"/>
+        <syncfusion:ColorMapping Value="-4" Color="#3785F2"/>
+        <syncfusion:ColorMapping Value="-2" Color="#95BBF1"/>
+        <syncfusion:ColorMapping Value="0" Color="#F0F0F0"/>
+        <syncfusion:ColorMapping Value="2" Color="#ECC393"/>
+        <syncfusion:ColorMapping Value="4" Color="#E89839"/>
+        <syncfusion:ColorMapping Value="6" Color="#DE5E0F"/>
+        <syncfusion:ColorMapping Value="8" Color="#B72E01"/>
+        <syncfusion:ColorMapping Value="10" Color="#820200"/>
+    </syncfusion:ColorMappingCollection>-->
+
+    <syncfusion:ColorMappingCollection x:Key="ColorBar_BeamRangeMap">
+        <syncfusion:ColorMapping Value="-5" Color="#000083"/>
+        <syncfusion:ColorMapping Value="-4" Color="#0119CD"/>
+        <syncfusion:ColorMapping Value="-3" Color="#1042FB"/>
+        <syncfusion:ColorMapping Value="-2" Color="#3785F2"/>
+        <syncfusion:ColorMapping Value="-1" Color="#95BBF1"/>
+        <syncfusion:ColorMapping Value="0" Color="#F0F0F0"/>
+        <syncfusion:ColorMapping Value="1" Color="#ECC393"/>
+        <syncfusion:ColorMapping Value="2" Color="#E89839"/>
+        <syncfusion:ColorMapping Value="3" Color="#DE5E0F"/>
+        <syncfusion:ColorMapping Value="4" Color="#B72E01"/>
+        <syncfusion:ColorMapping Value="5" Color="#820200"/>
+    </syncfusion:ColorMappingCollection>
+
+    <syncfusion:ColorMappingCollection x:Key="ColorBar_BeamRangeMap10">
+        <syncfusion:ColorMapping Value="-10" Color="#000083"/>
+        <syncfusion:ColorMapping Value="-8" Color="#0119CD"/>
+        <syncfusion:ColorMapping Value="-6" Color="#1042FB"/>
+        <syncfusion:ColorMapping Value="-4" Color="#3785F2"/>
+        <syncfusion:ColorMapping Value="-2" Color="#95BBF1"/>
+        <syncfusion:ColorMapping Value="0" Color="#F0F0F0"/>
+        <syncfusion:ColorMapping Value="2" Color="#ECC393"/>
+        <syncfusion:ColorMapping Value="4" Color="#E89839"/>
+        <syncfusion:ColorMapping Value="6" Color="#DE5E0F"/>
+        <syncfusion:ColorMapping Value="8" Color="#B72E01"/>
+        <syncfusion:ColorMapping Value="10" Color="#820200"/>
+    </syncfusion:ColorMappingCollection>
+
+
+    <!--sf: SfRangeSlider-->
+    <Style x:Key="myActiveTrackStyle" TargetType="Rectangle">
+        <Setter Property="Height" Value="10"/>
+        <Setter Property="Fill" Value="#FF00457E"/>
+        <Setter Property="RadiusX" Value="2"/>
+        <Setter Property="RadiusY" Value="2"/>
+    </Style>
+
+    <Style x:Key="myActiveTrackStyle_SpotMap" TargetType="Rectangle">
+        <Setter Property="Height" Value="10"/>
+        <Setter Property="Fill" Value="LightGray"/>
+    </Style>
+
+    <Style x:Key="myInActiveTrackStyle" TargetType="Rectangle">
+        <Setter Property="Height" Value="10"/>
+        <Setter Property="Fill" Value="LightGray"/>
+    </Style>
+    
+    <Style x:Key="myThumbStyle" TargetType="Thumb">
+        <Setter Property="Width" Value="13" />
+        <Setter Property="Height" Value="13" />
+        <Setter Property="Background" Value="#0095ff" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border x:Name="ThumbBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            CornerRadius="12" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    
+    
+    <!--Dashed GridAplitter-->
+    <Style x:Key="GridSplitterStyle_default" TargetType="{x:Type GridSplitter}">
+        <Setter Property="Width" Value="0.5"/>
+        <Setter Property="Margin" Value="10"/>
+        <Setter Property="Background" Value="Gray"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+    
+    <Style x:Key="GridSplitterStyle1" TargetType="{x:Type GridSplitter}" BasedOn="{StaticResource GridSplitterStyle_default}">
+        <Setter Property="Background" Value="Yellow"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type GridSplitter}">
+                    <Border BorderThickness="1,1,1,1">
+                        <Border.BorderBrush>
+                            <DrawingBrush Viewport="0,0,8,8" ViewportUnits="Absolute" TileMode="Tile">
+                                <DrawingBrush.Drawing>
+                                    <DrawingGroup>
+                                        <GeometryDrawing Brush="DarkGray">
+                                            <GeometryDrawing.Geometry>
+                                                <GeometryGroup>
+                                                    <RectangleGeometry Rect="0,0,50,50" />
+                                                    <RectangleGeometry Rect="50,50,50,50" />
+                                                </GeometryGroup>
+                                            </GeometryDrawing.Geometry>
+                                        </GeometryDrawing>
+                                    </DrawingGroup>
+                                </DrawingBrush.Drawing>
+                            </DrawingBrush>
+                        </Border.BorderBrush>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+
+</ResourceDictionary>
