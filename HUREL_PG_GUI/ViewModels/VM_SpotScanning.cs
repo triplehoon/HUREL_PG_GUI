@@ -462,6 +462,7 @@ namespace HUREL_PG_GUI.ViewModels
             }
         }
 
+
         private async Task MergeAndDrawDataLoop()
         {
             NCCAnalysisClass Class = new NCCAnalysisClass();

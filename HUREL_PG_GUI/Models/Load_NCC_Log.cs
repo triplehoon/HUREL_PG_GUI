@@ -108,12 +108,9 @@ namespace HUREL_PG_GUI.Models
 
             return TimeREF;
         }
-
-
         #endregion
 
         #region Sub-Function
-
         private DateTime GetReferenceDateTime_Record(List<string> Logs_Record, LogParameter param_pre)
         {
             string FirstTuningLog = Logs_Record.FindAll((string s) => s.Contains("tuning"))[0];
@@ -123,9 +120,6 @@ namespace HUREL_PG_GUI.Models
 
             return TimeREF;
         }
-
-
-
         private List<LogStruct_NCC_temp> ReadSingleLog_Record(string Log_Record)
         {
             List<LogStruct_NCC_temp> LogData = new List<LogStruct_NCC_temp>();
@@ -244,7 +238,6 @@ namespace HUREL_PG_GUI.Models
             }
             return LogData;
         }
-
         private LogParameter GetParameter_Config(string Log_Config)
         {
             // Return
@@ -295,7 +288,6 @@ namespace HUREL_PG_GUI.Models
 
             return param;
         }
-
         private (string, List<string>, List<string>) SortByLogName(string path)
         {
             List<string> LogList = Directory.GetFiles(path).ToList();
@@ -310,12 +302,9 @@ namespace HUREL_PG_GUI.Models
 
             return (Log_Config, Logs_Record, Logs_Specif);
         }
-
-
         ////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////
-
         private List<string> SortLog_Record(List<string> Log_Record)
         {
             // Return
@@ -352,7 +341,6 @@ namespace HUREL_PG_GUI.Models
 
             return LogSortedByLayer;
         }
-
         private List<string> SortByPartNumber(List<string> LogSortedByLayer)
         {
             #region File Order Verification(TEMP)
@@ -389,7 +377,6 @@ namespace HUREL_PG_GUI.Models
 
             return SortedLogs;
         }
-
         private List<string> SortLogFilesTNR(List<string> Log)
         {
             // Return
@@ -438,7 +425,6 @@ namespace HUREL_PG_GUI.Models
 
             return SortedLogs;
         }
-
         private (List<string>, List<string>, List<int>) SortLogFilesList(List<string> LogFilesList, bool isPartFile)
         {
             List<string> Tuning = new List<string>();
@@ -554,7 +540,6 @@ namespace HUREL_PG_GUI.Models
 
             return (SortedLogDirectory, LayerIDs, LayerNumbers);
         }
-
         private (List<string>, List<string>) AddSortedLogFileFullDirectory(List<string> pre_SortedLogDirectory, int LayerNumber, List<string> LogFiles, List<string> pre_LayerIDs)
         {
             List<string> SortedLogDirectory = pre_SortedLogDirectory;
@@ -572,7 +557,6 @@ namespace HUREL_PG_GUI.Models
 
             return (SortedLogDirectory, LayerIDs);
         }
-
         private string GenerateLayerIDs_PostProcessing(string Directory, int LayerNumber)
         {
             string FileName = Path.GetFileNameWithoutExtension(Directory).Split("\\").Last();
@@ -593,7 +577,6 @@ namespace HUREL_PG_GUI.Models
 
             return LayerID;
         }        
-
         private (NCCBeamState, int, string) CategorizeLogFile(string Directory)
         {
             NCCBeamState state;
@@ -650,7 +633,6 @@ namespace HUREL_PG_GUI.Models
             // Trace.WriteLine($"[Trace: Load_NCC_Log.cs  NCCLogFileLoad.CategorizeLogFile] &&&&& FileName: {FileName},          Layer ID: {LayerID}");
             return (state, LayerNumber, LayerID);
         }
-
         private List<LogStruct_NCC> ReadSynchronizedLogFile(string FilePath) // 0528
         {
             List<LogStruct_NCC> LogData = new List<LogStruct_NCC>();
@@ -793,8 +775,6 @@ namespace HUREL_PG_GUI.Models
 
             return LogData;
         }
-
-
         private List<LogStruct_NCC> ReadSortedLogFilesList(List<string> Directory, LogParameter param)
         {
             List<LogStruct_NCC> LogData = new List<LogStruct_NCC>();
@@ -949,7 +929,6 @@ namespace HUREL_PG_GUI.Models
 
             return LogData;
         }
-
         #endregion
     }
 }
