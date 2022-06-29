@@ -3,54 +3,42 @@
 
 
 namespace HUREL.PG
-{
-    public class Spot
+{    
+    public abstract class Spot
     {
-        public int LayerNumer { get; }
-        public double PositionX { get; }
-        public double PositionY { get; }
-        public double MonitoringUnit { get; }     
-
-        public double Depth { get; }
-
-        public string GetSpotInfo()
+        public int LayerNumber { get; private set; }
+        public double PlanPositionX { get; private set; }
+        public double PlanPositionY { get; private set; }
+        public double PlanMonitoringUnit { get; private set; }  
+        public int PlanSpotIndexNumber { get; private set; }
+        public virtual string PrintSpotInfo()
         {
             return string.Empty;
         }
         public Spot()
         {
             
-        }        
-    }
-
-    public class NccSpot : Spot
-    {       
-        public static List<NccSpot> ReadLogSpotData(string FilePath)
-        {
-            return null;
         }
     }
 
-    public class SmcSpot : Spot
+    public abstract class Layer
     {
+        public int LayerNumber { get; private set; }
 
-    }    
+        public double PlanEnergy { get; private set; }
 
-    public class Layer
-    {
-        List<Spot> SpotList = new List<Spot>();
-        int LayerNumber;
-
-        int GetSpotCount()
+        public virtual string PrintLayerInfo()
         {
-            return SpotList.Count;  
+            string str = string.Empty;
+            return str;
         }
-
-
     }
-
-    public class Session
+    public abstract class Session
     {
-        
+
     }
+
+    
+
+
 }
