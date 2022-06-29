@@ -63,6 +63,7 @@ namespace HUREL.PG.Ncc
         /// <summary>
         /// Load plan file
         /// if plan is loaded return true
+        /// And Make layers with plan file
         /// </summary>
         /// <param name="planFileDir"></param>
         /// <returns></returns>
