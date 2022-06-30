@@ -69,7 +69,8 @@ namespace HUREL.PG.Ncc
         /// <returns></returns>
         public bool LoadPlanFile(string planFileDir)
         {
-            
+            bool Jaerin_Git_Test = false;
+
             return false;
         }
     }
