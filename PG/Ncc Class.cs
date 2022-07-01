@@ -60,7 +60,7 @@ namespace HUREL.PG.Ncc
     {
         private List<NccLayer> layers = new List<NccLayer>();
 
-        private NccPlan plan = new NccPlan(null);
+        private NccPlan? plan = null;
 
         public bool IsPlanLoad { get; private set; }
 
@@ -108,8 +108,9 @@ namespace HUREL.PG.Ncc
                 {
                     using (StreamReader sr = new StreamReader(fs, Encoding.UTF8, false))
                     {
-                        string lines = null;
-                        string[] tempString = null;
+
+                        string lines = new string("");
+                        string[] tempString = new string[0];
 
                         int TempLayerNumber = 0;
 
@@ -168,7 +169,7 @@ namespace HUREL.PG.Ncc
             return null;
         }
 
-        public double TotalPlanMonitoringUnit { get; };
+        public double TotalPlanMonitoringUnit { get; }
 
         
         private struct PlanSpot
