@@ -99,7 +99,7 @@ namespace HUREL.PG.Ncc
             return null;
         }
 
-        public double TotalPlanMonitoringUnit { get; };
+        public double TotalPlanMonitoringUnit { get; }
 
         
         private struct PlanSpot

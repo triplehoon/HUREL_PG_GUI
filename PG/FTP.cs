@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using WinSCP;
 using System.Threading;
-using System.Windows.Forms;
 
 namespace HUREL.PG.Ncc
 {
@@ -18,10 +17,10 @@ namespace HUREL.PG.Ncc
             private set;
         }      
         public delegate void SyncAndDownloadLogHandler(string fileName);
-        public static event SyncAndDownloadLogHandler NewLogFileReceived;
+        public static event SyncAndDownloadLogHandler? NewLogFileReceived;
 
 
-        private static Session ftpSession = null;
+        private static WinSCP.Session? ftpSession = null;
         private static bool IsSessionOpen = false;
 
         public static (bool, string) OpenFtpSession(string hostName = "10.1.30.80", string userName = "clinical", string passWord = "Madne55")
@@ -39,7 +38,7 @@ namespace HUREL.PG.Ncc
 
             try
             {
-                ftpSession = new Session();
+                ftpSession = new WinSCP.Session();
                 ftpSession.Open(sessionOptions);
                 IsSessionOpen = true;
                 return (true, "Success");
@@ -59,7 +58,7 @@ namespace HUREL.PG.Ncc
             {
                 try
                 {
-                    ftpSession.Close();
+                    ftpSession?.Close();
                 }
                 catch (Exception e)
                 {
@@ -99,7 +98,11 @@ namespace HUREL.PG.Ncc
                 while (IsFtpStart)
                 {
                     try
-                    {
+                    {   if (ftpSession == null)
+                        {
+                            IsFtpStart = false; 
+                            return;
+                        }
                         RemoteDirectoryInfo directory = ftpSession.ListDirectory(remotePath);
 
                         foreach (RemoteFileInfo file in directory.Files)
