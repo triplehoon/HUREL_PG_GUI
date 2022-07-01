@@ -62,6 +62,8 @@ namespace HUREL.PG.Ncc
 
         private NccPlan plan = new NccPlan(null);
 
+        public bool IsPlanLoad { get; private set; }
+
         /// <summary>
         /// Load plan file
         /// if plan is loaded return true
@@ -75,6 +77,7 @@ namespace HUREL.PG.Ncc
             {
                 NccPlan tempPlan = new NccPlan(planFileDir);
                 plan = tempPlan;
+                IsPlanLoad = true;
 
                 return true;
             }
@@ -114,7 +117,7 @@ namespace HUREL.PG.Ncc
 
                         double LayerEnergy = Convert.ToDouble(tempString[2]);
                         double LayerMU = Convert.ToDouble(tempString[3]);
-                        int LayerSpotNumber = Convert.ToInt32(tempString[4]) / 2;
+                        int LayerSpotCount = Convert.ToInt32(tempString[4]) / 2;
 
                         while ((lines = sr.ReadLine()) != null)
                         {
@@ -128,7 +131,7 @@ namespace HUREL.PG.Ncc
 
                                 LayerEnergy = Convert.ToDouble(tempString[2]);
                                 LayerMU = Convert.ToDouble(tempString[3]);
-                                LayerSpotNumber = Convert.ToInt32(tempString[4]) / 2;
+                                LayerSpotCount = Convert.ToInt32(tempString[4]) / 2;
                             }
                             else // 해당 레이어의 데이터를 계속 만날 때 
                             {
@@ -136,7 +139,7 @@ namespace HUREL.PG.Ncc
 
                                 tempPlanSpot.LayerEnergy = LayerEnergy;
                                 tempPlanSpot.LayerMU = LayerMU;
-                                tempPlanSpot.LayerSpotNumber = LayerSpotNumber;
+                                tempPlanSpot.LayerSpotCount = LayerSpotCount;
                                 tempPlanSpot.LayerNumber = TempLayerNumber;
 
                                 tempPlanSpot.Xposition = Convert.ToDouble(tempString[0]);
@@ -172,7 +175,7 @@ namespace HUREL.PG.Ncc
             public int LayerNumber;
             public double LayerEnergy;
             public double LayerMU;
-            public int LayerSpotNumber;
+            public int LayerSpotCount;
 
             public double Xposition;
             public double Yposition;
