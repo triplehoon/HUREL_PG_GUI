@@ -7,7 +7,3 @@ using HUREL.PG.Ncc;
 
 Console.WriteLine("Hello, World!");
 Console.WriteLine();
-
-
-NCcSession Session = new NccSession();
-Session.
