@@ -92,6 +92,14 @@ namespace HUREL.PG.Ncc
 
             return false;
         }
+  
+        public bool LoadRecordSpecifLogFile(string recordFileDir, string SpecifFileDir)
+        {
+
+
+            return true;
+        }
+    
     }
 
     public class NccPlan
