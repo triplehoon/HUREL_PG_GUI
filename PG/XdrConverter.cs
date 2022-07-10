@@ -10,7 +10,8 @@ using System.Threading.Tasks;
 
 namespace HUREL.PG.Ncc
 {
-    public class XdrDataRecorderRpcLayerConverter
+    //public class XdrDataRecorderRpcLayerConverter
+    public class XdrConverter_Record
     {
 
         #region 주석처리
@@ -115,9 +116,10 @@ namespace HUREL.PG.Ncc
         public bool ErrorCheck = false;
         // When read appropriate Xdr file, it returns true.
 
-        public XdrDataRecorderRpcLayerConverter(Stream _xdrfile) // 계속해서 4개씩 읽어나감
+        //public XdrDataRecorderRpcLayerConverter(Stream _xdrfile) // 계속해서 4개씩 읽어나감
+        public XdrConverter_Record(Stream _xdrfile) // 계속해서 4개씩 읽어나감
         {
-            if (_xdrfile.CanRead != false)
+            if (_xdrfile.CanRead == false)
             {
                 ErrorCheck = true;
                 return;
@@ -314,7 +316,7 @@ namespace HUREL.PG.Ncc
         }
     }
 
-    class XdrConverter_Specific
+    public class XdrConverter_Specific
     {
         char[] version = new char[4];
         public bool ErrorCheck = false;

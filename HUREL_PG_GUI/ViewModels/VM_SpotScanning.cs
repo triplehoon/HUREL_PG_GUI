@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Input;
-using HUREL.PG.NCC;
+using HUREL.PG.Ncc;
 using System.Collections.Concurrent;
 
 namespace HUREL_PG_GUI.ViewModels
