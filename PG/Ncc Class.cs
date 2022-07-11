@@ -66,7 +66,7 @@ namespace HUREL.PG.Ncc
         private List<NccSpot> spots;
         public int BeamStateNumber { get; private set; }
 
-        public NccLayer(XdrConverter_Record logdir, XdrConverter_Specific specifFileDir, double logParameterCoeffX, double logParameterCoeffY, int LayerNumber, double planEnergy, int beamSateNumber, NccPlan plan)
+        public NccLayer(string recordFileDir, string SpecifFileDir, double para1, double para2)
         {
             spots = new List<NccSpot>();
 
