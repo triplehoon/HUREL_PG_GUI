@@ -65,12 +65,14 @@ namespace HUREL.PG.Ncc
     {
         private List<NccSpot> spots;
         public int BeamStateNumber { get; private set; }
+        public bool IsLayerValid { get; private set; }
 
         public NccLayer(string recordFileDir, string SpecifFileDir, double para1, double para2)
         {
             spots = new List<NccSpot>();
 
             spots.Add(new NccSpot());
+            IsLayerValid = false;
         }
         public NccSpot.NccBeamState NccBeamState { get; private set; }
         public List<NccSpot> GetSpot()
