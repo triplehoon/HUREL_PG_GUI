@@ -1,23 +1,14 @@
-﻿
-
-
-
-namespace HUREL.PG
-{    
+﻿namespace HUREL.PG
+{
     public abstract class Spot
     {
-        public int LayerNumber { get; private set; }
-        public double PlanPositionX { get; private set; }
-        public double PlanPositionY { get; private set; }
-        public double PlanMonitoringUnit { get; private set; }  
-        public int PlanSpotIndexNumber { get; private set; }
         public virtual string PrintSpotInfo()
         {
             return string.Empty;
         }
         public Spot()
         {
-            
+
         }
     }
 
@@ -32,13 +23,19 @@ namespace HUREL.PG
             string str = string.Empty;
             return str;
         }
+
+        public void setLayerProperty(int layerNumber, double planEnergy)
+        {
+            LayerNumber = layerNumber;
+            PlanEnergy = planEnergy;
+        }
     }
     public abstract class Session
     {
 
     }
 
-    
+
 
 
 }
