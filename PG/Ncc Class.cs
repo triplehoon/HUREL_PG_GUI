@@ -85,8 +85,35 @@ namespace HUREL.PG.Ncc
         {
             return spots;
         }
+
+        public static string GetLayerIdFromLogFileName(string LogDir)
+        {
+            // Return
+            string LayerId = "";
+
+            string LogName = Path.GetFileNameWithoutExtension(LogDir);
+            int layerNumber = Convert.ToInt32(LogName.Split('_')[4]);
+
+            if (LogName.Contains("record"))
+            {
+                int index = LogName.IndexOf("record");
+                LayerId = LogName.Substring(index + "record".Length + 1);
+            }
+            else if (LogName.Contains("specif"))
+            {
+                int index = LogName.IndexOf("specif");
+                LayerId = LogName.Substring(index + "specif".Length + 1);
+            }
+            else
+            {
+                Debug.Assert(true, $"Invalid Log File Name");
+            }
+
+            return LayerId;
+        }
+
     }
-    
+
     /// <summary>
     /// Dicom, Plan, Log, PG
     /// </summary>
@@ -308,7 +335,6 @@ namespace HUREL.PG.Ncc
 
             return nccSpot;
         }
-
         private List<NccLayer> insertLayer(List<NccLayer> layers, NccLayer nccLayer)
         {
             NccSpot.NccBeamState state = nccLayer.GetSingleLogInfo();
@@ -343,10 +369,11 @@ namespace HUREL.PG.Ncc
 
             return layers;
         }       
-
         private (List<NccLogSpot>, int, NccSpot.NccBeamState) getLogSpotData(string recordFileDir, string SpecifFileDir)
         {
             // Return
+            
+            
             List<NccLogSpot> logSpots = new List<NccLogSpot>();
 
             NccSpot.NccBeamState state;
@@ -471,33 +498,6 @@ namespace HUREL.PG.Ncc
 
             return (logSpots, layerNumber, state);
         }
-
-        private string getLayerIdFromLogFileName(string LogDir)
-        {
-            // Return
-            string LayerId = "";
-
-            string LogName = Path.GetFileNameWithoutExtension(LogDir);
-            int layerNumber = Convert.ToInt32(LogName.Split('_')[4]);
-
-            if (LogName.Contains("record"))
-            {
-                int index = LogName.IndexOf("record");
-                LayerId = LogName.Substring(index + "record".Length + 1);
-            }
-            else if (LogName.Contains("specif"))
-            {
-                int index = LogName.IndexOf("specif");
-                LayerId = LogName.Substring(index + "specif".Length + 1);
-            }
-            else
-            {
-                Debug.Assert(true, $"Invalid Log File Name");
-            }
-
-            return LayerId;
-        }
-
         private (NccSpot.NccBeamState, int, string) checkByLogFileName(string Dir)
         {
             string fileName = Path.GetFileNameWithoutExtension(Dir);
