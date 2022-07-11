@@ -10,14 +10,9 @@ namespace HUREL.PG.Ncc
 {
     public class NccSpot : Spot
     {
-        public NccSpot spot { get; }
-
-        // LogData.Add(new LogStruct_NCC(templayerNumber, layerId, ((tempyPosition - data_speicf.icyOffset) * logParameter.coeff_y), ((tempxPosition - data_speicf.icxOffset) * logParameter.coeff_x), state, tempstartEpochTime, tempendEpochTime, Gap_FirstSpot));        
         public NccBeamState BeamState { get; private set; }
         public DateTime BeamStartTime { get; private set; }
         public DateTime BeamEndTime { get; private set; } 
-
-        // Jaerin Add (Temp)
         public double XPosition { get; private set; }
         public double YPosition { get; private set; }
         public int LayerNumber { get; private set; }
@@ -44,35 +39,17 @@ namespace HUREL.PG.Ncc
                 planSpot = value;
             }
         }
-
-         
-        public NccSpot()
+        public NccSpot(NccPlanSpot plan, NccLogSpot log) //
         {
-            
-        }
-        // PG add
+            planSpot = plan;
 
-        public NccSpot(NccPlanSpot plan, LogStruct_NCC log) //
-        {
-            spot = new NccSpot();
-
-            spot.planSpot = plan;
-
-            spot.BeamStartTime = log.StartTime;
-            spot.BeamEndTime = log.EndTime;
-            spot.BeamState = log.State;
-            spot.LayerNumber = log.LayerNumber;
-            spot.LayerId = log.LayerID;
-            spot.XPosition = log.XPosition;
-            spot.YPosition = log.YPosition;
-        }
-        //public NccSpot(NccPlanSpot plan)
-        //{
-
-        //}
-        public NccSpot(string logLayerId)
-        {
-            //LogLayerId = logLayerId;
+            BeamStartTime = log.StartTime;
+            BeamEndTime = log.EndTime;
+            BeamState = log.State;
+            LayerNumber = log.LayerNumber;
+            LayerId = log.LayerID;
+            XPosition = log.XPosition;
+            YPosition = log.YPosition;
         }
         public enum NccBeamState
         {
@@ -80,38 +57,22 @@ namespace HUREL.PG.Ncc
         }        
         public void ChangNccBeamState(NccBeamState state)
         {
-            //State = state;
+            BeamState = state;
         }
     }
-
-
-
 
     public class NccLayer : Layer
     {
         private List<NccSpot> spots;
         public NccLayer(List<NccSpot> spot, int layerNumber, double planEnergy)
         {
-            if (spot.Count != 0)
-            {
-                spots = spot;
-                setLayerProperty(layerNumber, planEnergy);
-            }
-
+            spots = spot;
+            LayerNumber = layerNumber;
+            PlanEnergy = planEnergy;
+            LayerId = spot[0].LayerId;
         }
-
-        //public bool LogInfo(XdrDataRecorderRpcLayerConverter convertInfo)
-        public bool LogInfo(XdrConverter_Record convertInfo)
-        {
-            if (convertInfo.ErrorCheck)
-            {
-                return false;
-            }
-            
-            return true;
-        }
-
-        public NccSpot.NccBeamState GetSingleLogInfo(NccLayer nccLayer)
+    
+        public NccSpot.NccBeamState GetSingleLogInfo()
         {
             if (spots.Count != 0)
             {
@@ -127,11 +88,6 @@ namespace HUREL.PG.Ncc
         {
             return spots;
         }
-
-        private int setLayerNumber(int layerNumber)
-        {
-            return layerNumber;
-        }
     }
     
     /// <summary>
@@ -139,31 +95,29 @@ namespace HUREL.PG.Ncc
     /// </summary>
     public class NccSession:Session
     {
-        static double ToleranceDistBetweenPlanAndLogSpot = 3;
-        static void ChangetestValue(int value)
-        {
-            ToleranceDistBetweenPlanAndLogSpot = value;
-        }
-
+        private static double ToleranceDistBetweenPlanAndLogSpot = 3;
 
         private List<NccLayer> layers = new List<NccLayer>(); //////////////
+        public List<NccLayer> Layers
+        { 
+            get 
+            { 
+                return layers; 
+            } 
+        }
 
         private NccPlan plan = new NccPlan("");
 
         private DateTime firstLayerFirstSpotLogTime;
-
-        public string? LogFile { get; private set; } // added by jaerin
 
         public bool IsPlanLoad { get; private set; }
 
         public bool IsConfigLogFileLoad { get; private set; }
 
         public bool IsGetReferenceTime { get; private set; }
-                
-        public record LogStruct_NCC(int LayerNumber, string LayerID, double XPosition, double YPosition,
-                                          NccSpot.NccBeamState State, DateTime StartTime, DateTime EndTime);
 
-        private LogParameter logParameter = new LogParameter();
+      
+        private NccLogParameter logParameter = new NccLogParameter();
 
 
         
@@ -186,11 +140,11 @@ namespace HUREL.PG.Ncc
             }
             else if (planFileDir == "")
             {
-                //MessageBox.Show($"Plan_NCC File Load Canceled", $"Plan_NCC File Load Canceled", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                IsPlanLoad = false;
             }
             else
             {
-                //MessageBox.Show($"InValid Data Extension", $"Plan_NCC File Load Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                IsPlanLoad = false;                
             }            
 
             return false;
@@ -300,9 +254,18 @@ namespace HUREL.PG.Ncc
                 return false;
             }
 
+            foreach(var chklayer in layers)
+            {
+                var layerInfo = getLayerIdFromLogFileName(recordFileDir);
+                if (chklayer.LayerId == layerInfo)
+                {
+                    Debug.WriteLine("Layer file is already loaded");
+                    return true;
+                }
+            }
             #endregion
 
-            (List<LogStruct_NCC> logSpots, int logLayerNumber, NccSpot.NccBeamState state) = getLogSpotData(recordFileDir, SpecifFileDir);
+            (List<NccLogSpot> logSpots, int logLayerNumber, NccSpot.NccBeamState state) = getLogSpotData(recordFileDir, SpecifFileDir);
             (List<NccPlanSpot> planSpots, double planLayerEnergy) = plan.GetPlanSpotsByLayerNumber(logLayerNumber);
             List<NccSpot> nccSpot = MergePlanLog(logSpots, planSpots);
 
@@ -312,26 +275,20 @@ namespace HUREL.PG.Ncc
             return true;
         }
 
-        public List<NccLayer> GetLayerInfo()
-        {
-            return layers;
-        }
-
-
-
-        private List<NccSpot> MergePlanLog(List<LogStruct_NCC> logSpots, List<NccPlanSpot> planSpots)
+        #region Load Layer files
+        private List<NccSpot> MergePlanLog(List<NccLogSpot> logSpots, List<NccPlanSpot> planSpots)
         {
             List<NccSpot> nccSpot = new List<NccSpot>();
             double layerEnergy = planSpots[0].LayerEnergy;
 
-            foreach (LogStruct_NCC logSpot in logSpots)
+            foreach (NccLogSpot logSpot in logSpots)
             {
                 foreach (NccPlanSpot planSpot in planSpots)
                 {
                     double distance = Math.Sqrt(Math.Pow(logSpot.XPosition - planSpot.Xposition, 2) + Math.Pow(logSpot.YPosition - planSpot.Yposition, 2));
                     if (distance <= ToleranceDistBetweenPlanAndLogSpot)
                     {
-                        nccSpot.Add((new NccSpot(planSpot, logSpot)).spot);
+                        nccSpot.Add(new NccSpot(planSpot, logSpot));
                         break;
                     }
                 }
@@ -342,7 +299,7 @@ namespace HUREL.PG.Ncc
 
         private List<NccLayer> InsertSpotData(List<NccLayer> layers, NccLayer nccLayer)
         {
-            NccSpot.NccBeamState state = nccLayer.GetSingleLogInfo(nccLayer);
+            NccSpot.NccBeamState state = nccLayer.GetSingleLogInfo();
 
             List<int> LayerNumbers = new List<int>(layers.Count);
             foreach (NccLayer layer in layers)
@@ -375,10 +332,10 @@ namespace HUREL.PG.Ncc
             return layers;
         }       
 
-        private (List<LogStruct_NCC>, int, NccSpot.NccBeamState) getLogSpotData(string recordFileDir, string SpecifFileDir)
+        private (List<NccLogSpot>, int, NccSpot.NccBeamState) getLogSpotData(string recordFileDir, string SpecifFileDir)
         {
             // Return
-            List<LogStruct_NCC> logSpots = new List<LogStruct_NCC>();
+            List<NccLogSpot> logSpots = new List<NccLogSpot>();
 
             NccSpot.NccBeamState state;
             int layerNumber;
@@ -442,7 +399,7 @@ namespace HUREL.PG.Ncc
                         yPositions.Clear();
                         epochTime.Clear();
 
-                        logSpots.Add(new LogStruct_NCC(templayerNumber, layerId, ((tempyPosition - data_speicf.icyOffset) * logParameter.coeff_y), ((tempxPosition - data_speicf.icxOffset) * logParameter.coeff_x), state, tempstartEpochTime, tempendEpochTime));
+                        logSpots.Add(new NccLogSpot(templayerNumber, layerId, ((tempyPosition - data_speicf.icyOffset) * logParameter.coeff_y), ((tempxPosition - data_speicf.icxOffset) * logParameter.coeff_x), state, tempstartEpochTime, tempendEpochTime));
                         spotContinue = false;
                     }
 
@@ -495,7 +452,7 @@ namespace HUREL.PG.Ncc
                     yPositions.Clear();
                     epochTime.Clear();
 
-                    logSpots.Add(new LogStruct_NCC(templayerNumber, layerId, ((tempyPosition - data_speicf.icyOffset) * logParameter.coeff_y), ((tempxPosition - data_speicf.icxOffset) * logParameter.coeff_x), state, tempstartEpochTime, tempendEpochTime));
+                    logSpots.Add(new NccLogSpot(templayerNumber, layerId, ((tempyPosition - data_speicf.icyOffset) * logParameter.coeff_y), ((tempxPosition - data_speicf.icxOffset) * logParameter.coeff_x), state, tempstartEpochTime, tempendEpochTime));
                     spotContinue = false;
                 }
             }
@@ -585,8 +542,8 @@ namespace HUREL.PG.Ncc
 
             return (state, layerNumber, layerId);
         }
-
-        private struct LogParameter
+        #endregion
+        private struct NccLogParameter
         {
             public double coeff_x;
             public double coeff_y;
@@ -605,7 +562,7 @@ namespace HUREL.PG.Ncc
             {
                 PlanFile = planFile;
 
-                using (FileStream fs = new FileStream(planFile, FileMode.Open))
+                using (FileStream fs = new FileStream(planFile!, FileMode.Open))
                 {
                     using (StreamReader sr = new StreamReader(fs, Encoding.UTF8, false))
                     {
@@ -614,13 +571,13 @@ namespace HUREL.PG.Ncc
 
                         int TempLayerNumber = 0;
 
-                        tempString = sr.ReadLine().Split(",");
+                        tempString = sr.ReadLine()!.Split(",");
 
                         double LayerEnergy = Convert.ToDouble(tempString[2]);
                         double LayerMU = Convert.ToDouble(tempString[3]);
                         int LayerSpotCount = Convert.ToInt32(tempString[4]) / 2;
 
-                        while ((lines = sr.ReadLine()) != null)
+                        while ((lines = sr.ReadLine()!) != null)
                         {
                             NccPlanSpot tempPlanSpot = new NccPlanSpot();
 
@@ -637,18 +594,8 @@ namespace HUREL.PG.Ncc
                             else
                             {
                                 tempString = lines.Split("\t");
-
-                                tempPlanSpot.LayerEnergy = LayerEnergy;
-                                tempPlanSpot.LayerMU = LayerMU;
-                                tempPlanSpot.LayerSpotCount = LayerSpotCount;
-                                tempPlanSpot.LayerNumber = TempLayerNumber;
-
-                                tempPlanSpot.Xposition = Convert.ToDouble(tempString[0]);
-                                tempPlanSpot.Yposition = Convert.ToDouble(tempString[1]);
-                                tempPlanSpot.Zposition = Convert.ToDouble(tempString[2]);
-                                tempPlanSpot.MonitoringUnit = Convert.ToDouble(tempString[3]);
-
-                                spots.Add(tempPlanSpot);
+                                spots.Add(new NccPlanSpot(TempLayerNumber, LayerEnergy, LayerMU, LayerSpotCount, Convert.ToDouble(tempString[0]),
+                                                         Convert.ToDouble(tempString[1]), Convert.ToDouble(tempString[2]), Convert.ToDouble(tempString[3])));
                             }
                         }
                     }
@@ -664,13 +611,7 @@ namespace HUREL.PG.Ncc
                 TotalPlanLayer = spots.Last().LayerNumber;
             }
         }        
-        public string PlanFile { get; private set; }
-        
-        public NccPlan GetPlanByLayerNumber(int layerNumber)
-        {
-            return null;
-        }
-
+        public string? PlanFile { get; private set; }      
         public (List<NccPlanSpot>, double layerEnergy) GetPlanSpotsByLayerNumber(int layerNumber)
         {
             List<NccPlanSpot> planSpotSingleLayer = (from planSpots in spots
@@ -680,24 +621,15 @@ namespace HUREL.PG.Ncc
 
             return (planSpotSingleLayer, layerEnergy);
         }
-
-        public double TotalPlanMonitoringUnit { get; }            
-        
+        public double TotalPlanMonitoringUnit { get; }                    
         public int TotalPlanLayer { get; }
     }
 
+    public record NccLogSpot(int LayerNumber = -1, string LayerID = "", double XPosition = 0, double YPosition = 0,
+                                        NccSpot.NccBeamState State = NccSpot.NccBeamState.Unknown, DateTime StartTime = new DateTime(), DateTime EndTime = new DateTime());
+    
+    public record NccPlanSpot(int LayerNumber = -1, double LayerEnergy = 0, double LayerMU = 0, int LayerSpotCount = 0,
+                              double Xposition = 0, double Yposition =0, double Zposition = 0, double MonitoringUnit = 0);
+    
 
-
-    public struct NccPlanSpot
-    {
-        public int LayerNumber;
-        public double LayerEnergy;
-        public double LayerMU;
-        public int LayerSpotCount;
-
-        public double Xposition;
-        public double Yposition;
-        public double Zposition;
-        public double MonitoringUnit;
-    }
 }

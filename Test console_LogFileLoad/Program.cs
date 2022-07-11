@@ -50,9 +50,9 @@ bool flag_recordspecif3 = session.LoadRecordSpecifLogFile(recordLogFile3, specif
 bool flag_recordspecif4 = session.LoadRecordSpecifLogFile(recordLogFile4, specifLogFile4);
 bool flag_recordspecif5 = session.LoadRecordSpecifLogFile(recordLogFile5, specifLogFile5);
 
-foreach (NccLayer layer in session.GetLayerInfo())
+foreach (NccLayer layer in session.Layers)
 {
-    Console.WriteLine($"Layer: {layer.LayerNumber}, Energy: {layer.PlanEnergy}, Spot: {layer.GetSpot().Count}");
+    Console.WriteLine($"Layer: {layer.LayerNumber}, Energy: {layer.PlanEnergy}, Spot: {layer.GetSpot().Count}");   
 }
 
 

@@ -14,20 +14,14 @@
 
     public abstract class Layer
     {
-        public int LayerNumber { get; private set; }
-
-        public double PlanEnergy { get; private set; }
+        public int LayerNumber { get; protected set; }
+        public string? LayerId { get; protected set; }
+        public double PlanEnergy { get; protected set; }
 
         public virtual string PrintLayerInfo()
         {
             string str = string.Empty;
             return str;
-        }
-
-        public void setLayerProperty(int layerNumber, double planEnergy)
-        {
-            LayerNumber = layerNumber;
-            PlanEnergy = planEnergy;
         }
     }
     public abstract class Session
