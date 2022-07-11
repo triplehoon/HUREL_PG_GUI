@@ -65,14 +65,6 @@ namespace HUREL.PG.Ncc
     {
         private List<NccSpot> spots;
         public int BeamStateNumber { get; private set; }
-        public NccLayer(List<NccSpot> spot, int layerNumber, double planEnergy)
-        {
-            spots = spot;
-            LayerNumber = layerNumber;
-            PlanEnergy = planEnergy;
-            LayerId = spot[0].LayerId;
-            NccBeamState = spot[0].BeamState;
-        }
 
         public NccLayer(XdrConverter_Record logdir, XdrConverter_Specific specifFileDir, double logParameterCoeffX, double logParameterCoeffY, int LayerNumber, double planEnergy, int beamSateNumber, NccPlan plan)
         {
@@ -111,7 +103,6 @@ namespace HUREL.PG.Ncc
 
             return LayerId;
         }
-
     }
 
     /// <summary>
@@ -287,7 +278,7 @@ namespace HUREL.PG.Ncc
                 return false;
             }
 
-            if (getLayerIdFromLogFileName(recordFileDir) != getLayerIdFromLogFileName(SpecifFileDir))
+            if (NccLayer.GetLayerIdFromLogFileName(recordFileDir) != NccLayer.GetLayerIdFromLogFileName(SpecifFileDir))
             {
                 Debug.Assert(true, $"LayerId(record) != LayerId(specif)");
                 return false;
