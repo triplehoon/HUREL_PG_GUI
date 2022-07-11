@@ -64,26 +64,23 @@ namespace HUREL.PG.Ncc
     public class NccLayer : Layer
     {
         private List<NccSpot> spots;
+        public int BeamStateNumber { get; private set; }
         public NccLayer(List<NccSpot> spot, int layerNumber, double planEnergy)
         {
             spots = spot;
             LayerNumber = layerNumber;
             PlanEnergy = planEnergy;
             LayerId = spot[0].LayerId;
-        }
-    
-        public NccSpot.NccBeamState GetSingleLogInfo()
-        {
-            if (spots.Count != 0)
-            {
-                return spots[0].BeamState;
-            }
-            else
-            {
-                return NccSpot.NccBeamState.Unknown;
-            }
+            NccBeamState = spot[0].BeamState;
         }
 
+        public NccLayer(XdrConverter_Record logdir, XdrConverter_Specific specifFileDir, double logParameterCoeffX, double logParameterCoeffY, int LayerNumber, double planEnergy, int beamSateNumber, NccPlan plan)
+        {
+            spots = new List<NccSpot>();
+
+            spots.Add(new NccSpot());
+        }
+        public NccSpot.NccBeamState NccBeamState { get; private set; }
         public List<NccSpot> GetSpot()
         {
             return spots;
@@ -119,7 +116,6 @@ namespace HUREL.PG.Ncc
       
         private NccLogParameter logParameter = new NccLogParameter();
 
-
         
         /// <summary>
         /// Load plan file
@@ -132,8 +128,16 @@ namespace HUREL.PG.Ncc
         {
             if (planFileDir.EndsWith("pld") || planFileDir.EndsWith("txt"))
             {
-                NccPlan tempPlan = new NccPlan(planFileDir);
-                plan = tempPlan;
+                try
+                {
+                    plan = new NccPlan(planFileDir);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex.Message);
+                    return false;
+                }
+                
                 IsPlanLoad = true;
 
                 return true;
@@ -156,55 +160,63 @@ namespace HUREL.PG.Ncc
             // # SAD - M-id 21900
             // GTR3-PBS;SAD;DOUBLE;2;A;;;SAD parameter (X, Y);1915.8, 2300.2
             // GTR3-PBS;distanceFromIcToIsocenter;DOUBLE;2;A;;;Distance from Ic to Isocenter (X, Y);1148.16, 1202.49
-
-            if (configFileDir.Contains(".idt_config.csv"))
+            try
             {
-                double sad_x, sad_y;
-                double distICtoIso_x, distICtoIso_y;
-
-                StreamReader sr = new StreamReader(configFileDir);
-                while (!sr.EndOfStream)
+                if (configFileDir.Contains(".idt_config.csv"))
                 {
-                    string? line = sr.ReadLine();
-                    if (!string.IsNullOrEmpty(line))
+                    double sad_x, sad_y;
+                    double distICtoIso_x, distICtoIso_y;
+
+                    StreamReader sr = new StreamReader(configFileDir);
+                    while (!sr.EndOfStream)
                     {
-                        if (line.Contains("# SAD - M-id 21900"))
+                        string? line = sr.ReadLine();
+                        if (!string.IsNullOrEmpty(line))
                         {
-                            line = sr.ReadLine(); // "GTR3-PBS;SAD;DOUBLE;2;A;;;SAD parameter (X,Y);1915.8,2300.2"
-                            if (!string.IsNullOrEmpty(line))
+                            if (line.Contains("# SAD - M-id 21900"))
                             {
-                                string compareString = "GTR3-PBS;SAD;DOUBLE;2;A;;;SAD parameter (X,Y);";
-                                if (line.Contains(compareString))
+                                line = sr.ReadLine(); // "GTR3-PBS;SAD;DOUBLE;2;A;;;SAD parameter (X,Y);1915.8,2300.2"
+                                if (!string.IsNullOrEmpty(line))
                                 {
-                                    int length = compareString.Length;
-                                    string splitStr = line.Substring(length);
-                                    sad_x = Convert.ToDouble(splitStr.Split(",")[0]);
-                                    sad_y = Convert.ToDouble(splitStr.Split(",")[1]);
-
-                                    line = sr.ReadLine();   // "GTR3-PBS;distanceFromIcToIsocenter;DOUBLE;2;A;;;Distance from Ic to Isocenter (X,Y);1148.16,1202.49"
-                                    if (!string.IsNullOrEmpty(line))
+                                    string compareString = "GTR3-PBS;SAD;DOUBLE;2;A;;;SAD parameter (X,Y);";
+                                    if (line.Contains(compareString))
                                     {
-                                        compareString = "GTR3-PBS;distanceFromIcToIsocenter;DOUBLE;2;A;;;Distance from Ic to Isocenter (X,Y);";
-                                        if (line.Contains(compareString))
+                                        int length = compareString.Length;
+                                        string splitStr = line.Substring(length);
+                                        sad_x = Convert.ToDouble(splitStr.Split(",")[0]);
+                                        sad_y = Convert.ToDouble(splitStr.Split(",")[1]);
+
+                                        line = sr.ReadLine();   // "GTR3-PBS;distanceFromIcToIsocenter;DOUBLE;2;A;;;Distance from Ic to Isocenter (X,Y);1148.16,1202.49"
+                                        if (!string.IsNullOrEmpty(line))
                                         {
-                                            length = compareString.Length;
-                                            splitStr = line.Substring(length);
-                                            distICtoIso_x = Convert.ToDouble(splitStr.Split(",")[0]);
-                                            distICtoIso_y = Convert.ToDouble(splitStr.Split(",")[1]);
+                                            compareString = "GTR3-PBS;distanceFromIcToIsocenter;DOUBLE;2;A;;;Distance from Ic to Isocenter (X,Y);";
+                                            if (line.Contains(compareString))
+                                            {
+                                                length = compareString.Length;
+                                                splitStr = line.Substring(length);
+                                                distICtoIso_x = Convert.ToDouble(splitStr.Split(",")[0]);
+                                                distICtoIso_y = Convert.ToDouble(splitStr.Split(",")[1]);
 
-                                            logParameter.coeff_x = sad_x / (sad_x - distICtoIso_x);
-                                            logParameter.coeff_y = sad_y / (sad_y - distICtoIso_y);
-                                            IsConfigLogFileLoad = true;
+                                                logParameter.coeff_x = sad_x / (sad_x - distICtoIso_x);
+                                                logParameter.coeff_y = sad_y / (sad_y - distICtoIso_y);
+                                                IsConfigLogFileLoad = true;
 
-                                            return true;
+                                                return true;
+                                            }
                                         }
-                                    }                                    
+                                    }
                                 }
-                            }                            
+                            }
                         }
-                    }                    
-                }                
-            }            
+                    }
+                }
+            }
+
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+                return false;
+            }
             return false;
         }
   
@@ -267,16 +279,16 @@ namespace HUREL.PG.Ncc
 
             (List<NccLogSpot> logSpots, int logLayerNumber, NccSpot.NccBeamState state) = getLogSpotData(recordFileDir, SpecifFileDir);
             (List<NccPlanSpot> planSpots, double planLayerEnergy) = plan.GetPlanSpotsByLayerNumber(logLayerNumber);
-            List<NccSpot> nccSpot = MergePlanLog(logSpots, planSpots);
+            List<NccSpot> nccSpot = mergePlanLog(logSpots, planSpots);
 
             NccLayer layer = new NccLayer(nccSpot, logLayerNumber, planLayerEnergy);
-            layers = InsertSpotData(layers, layer);
+            layers = insertLayer(layers, layer);
 
             return true;
         }
 
         #region Load Layer files
-        private List<NccSpot> MergePlanLog(List<NccLogSpot> logSpots, List<NccPlanSpot> planSpots)
+        private List<NccSpot> mergePlanLog(List<NccLogSpot> logSpots, List<NccPlanSpot> planSpots)
         {
             List<NccSpot> nccSpot = new List<NccSpot>();
             double layerEnergy = planSpots[0].LayerEnergy;
@@ -297,7 +309,7 @@ namespace HUREL.PG.Ncc
             return nccSpot;
         }
 
-        private List<NccLayer> InsertSpotData(List<NccLayer> layers, NccLayer nccLayer)
+        private List<NccLayer> insertLayer(List<NccLayer> layers, NccLayer nccLayer)
         {
             NccSpot.NccBeamState state = nccLayer.GetSingleLogInfo();
 
@@ -341,7 +353,7 @@ namespace HUREL.PG.Ncc
             int layerNumber;
             string layerId;
 
-            (state, layerNumber, layerId) = CheckByLogFileName(recordFileDir);
+            (state, layerNumber, layerId) = checkByLogFileName(recordFileDir);
 
             Stream xdrConverter_speicf = File.Open(SpecifFileDir, FileMode.Open);
             var data_speicf = new XdrConverter_Specific(xdrConverter_speicf);
@@ -486,7 +498,7 @@ namespace HUREL.PG.Ncc
             return LayerId;
         }
 
-        private (NccSpot.NccBeamState, int, string) CheckByLogFileName(string Dir)
+        private (NccSpot.NccBeamState, int, string) checkByLogFileName(string Dir)
         {
             string fileName = Path.GetFileNameWithoutExtension(Dir);
 
@@ -539,7 +551,7 @@ namespace HUREL.PG.Ncc
                     state = NccSpot.NccBeamState.Normal;
                 }
             }
-
+            layerId = getLayerIdFromLogFileName(Dir);
             return (state, layerNumber, layerId);
         }
         #endregion
@@ -557,7 +569,7 @@ namespace HUREL.PG.Ncc
     {
         private List<NccPlanSpot> spots = new List<NccPlanSpot>();
         public NccPlan(string planFile)
-        {
+        {    
             if (planFile != null & planFile != "")
             {
                 PlanFile = planFile;

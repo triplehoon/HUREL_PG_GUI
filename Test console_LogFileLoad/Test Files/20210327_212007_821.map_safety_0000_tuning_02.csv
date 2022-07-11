@@ -1,0 +1,8 @@
+beamlineId,time,info
+-1,3월-27-2021 09:20:11:185 오후 (KST),"class.mcr_scu_divergence_iccyclo_icnozzle.bool_attr=1.0"
+-1,3월-27-2021 09:20:11:185 오후 (KST),"tr3_scu.nozzle.beam_precond=1.0"
+-1,3월-27-2021 09:20:11:185 오후 (KST),"tr3_scu.pbsconditions.status=1.0"
+-1,3월-27-2021 09:20:11:185 오후 (KST),"tr3_scu.pbsfcu.status=1.0"
+-1,3월-27-2021 09:20:11:185 오후 (KST),"tr3_scu.pbsgcu.status=1.0"
+-1,3월-27-2021 09:20:11:185 오후 (KST),"tr3_scu.pbsrcu.status=1.0"
+-1,3월-27-2021 09:20:11:185 오후 (KST),"tr3_scu.tcr.accesspt_motion_enable=1.0"
