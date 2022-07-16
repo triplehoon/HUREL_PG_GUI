@@ -10,36 +10,35 @@ namespace HUREL.PG.Ncc
 {
     public class NccSpot : Spot
     {
-        public NccBeamState BeamState { get; private set; }
         public DateTime BeamStartTime { get; private set; }
-        public DateTime BeamEndTime { get; private set; } 
-        public double XPosition { get; private set; }
-        public double YPosition { get; private set; }
+        public DateTime BeamEndTime { get; private set; }
+        public NccBeamState BeamState { get; private set; }
         public int LayerNumber { get; private set; }
         public string LayerId { get; private set; }
-        
+        public double XPosition { get; private set; }
+        public double YPosition { get; private set; }
 
         private NccPlanSpot planSpot;
         public NccPlanSpot PlanSpot
-        { 
+        {
             get
-            { 
+            {
                 if (BeamState == NccBeamState.Tuning)
                 {
                     Debug.Assert(true, "Tuning beam has no Plan info");
                     return new NccPlanSpot();
                 }
-                else 
-                { 
-                    return planSpot; 
+                else
+                {
+                    return planSpot;
                 }
-            } 
+            }
             private set
             {
                 planSpot = value;
             }
         }
-        public NccSpot(NccPlanSpot plan, NccLogSpot log) //
+        public NccSpot(NccPlanSpot plan, NccLogSpot log)
         {
             planSpot = plan;
 
@@ -54,8 +53,8 @@ namespace HUREL.PG.Ncc
         public enum NccBeamState
         {
             Normal, Tuning, Resume, Unknown
-        }        
-        public void ChangNccBeamState(NccBeamState state)
+        }
+        public void ChangeNccBeamState(NccBeamState state)
         {
             BeamState = state;
         }
@@ -63,23 +62,47 @@ namespace HUREL.PG.Ncc
 
     public class NccLayer : Layer
     {
-        private List<NccSpot> spots;
-        public int BeamStateNumber { get; private set; }
-        public bool IsLayerValid { get; private set; }
-
-        public NccLayer(string recordFileDir, string SpecifFileDir, double para1, double para2)
+        public NccLayer(string recordFileDir, string SpecifFileDir, double coeff_x, double coeff_y, NccPlan plan)
         {
-            spots = new List<NccSpot>();
+            (List<NccLogSpot> logSpots, int layerNumber, string layerId, NccSpot.NccBeamState state) = LoadLogFile(recordFileDir, SpecifFileDir, coeff_x, coeff_y);
+            (List<NccPlanSpot> planSpots, double planLayerEnergy) = plan.GetPlanSpotsByLayerNumber(layerNumber);
+            spots = mergePlanLog(logSpots, planSpots);
 
-            spots.Add(new NccSpot());
-            IsLayerValid = false;
+            SetLayerEnergy(planLayerEnergy);
+            SetLayerNumber(layerNumber);
+            SetLayerId(layerId);
+
+            BeamStateNumber = -999999; // use?
+            NccBeamState = state;
+
+            IsLayerValid = true; // purpose?
         }
+
+        #region Properties
+
+        private List<NccSpot> spots;
+
+        private static double ToleranceDistBetweenPlanAndLogSpot = 3;
+        public int BeamStateNumber { get; private set; } // not appropriate when part exist
+        // (Example) Normal beam: Layer 0, divided into part(1 ~ 3), tunned twice, pause exist
+        //   Log file Name (descending time): 
+        //      0000_part_01_tuning_01.xdr  -> LayerNumber: 0 / partNumber: 1 / NccBeamState: Tuning / BeamStateNumber: 1
+        //      0000_part_01_tuning_02.xdr  -> LayerNumber: 0 / partNumber: 1 / NccBeamState: Tuning / BeamStateNumber: 2
+        //      0000_part_01.xdr            -> LayerNumber: 0 / partNumber: 1 / NccBeamState: Normal / BeamStateNumber: 1
+        //      0000_part_01_resume_01.xdr  -> LayerNumber: 0 / partNumber: 1 / NccBeamState: Resume / BeamStateNumber: 1 ***
+        //      0000_part_01_resume_02.xdr  -> LayerNumber: 0 / partNumber: 1 / NccBeamState: Resume / BeamStateNumber: 2
+        //      0000_part_02.xdr            -> LayerNumber: 0 / partNumber: 2 / NccBeamState: Normal / BeamStateNumber: 2
+        //      0000_part_03.xdr            -> LayerNumber: 0 / partNumber: 3 / NccBeamState: Normal / BeamStateNumber: 3
+        //      0000_part_03_resume_01.xdr  -> LayerNumber: 0 / partNumber: 3 / NccBeamState: Resume / BeamStateNumber: 1 ***
         public NccSpot.NccBeamState NccBeamState { get; private set; }
+        public bool IsLayerValid { get; private set; } // purpose?
+
+        #endregion
+
         public List<NccSpot> GetSpot()
         {
             return spots;
         }
-
         public static string GetLayerIdFromLogFileName(string LogDir)
         {
             // Return
@@ -105,38 +128,244 @@ namespace HUREL.PG.Ncc
 
             return LayerId;
         }
+
+        #region private functions
+        private (NccSpot.NccBeamState, int, string) getInfoFromLogFileName(string LogDir)
+        {
+            string fileName = Path.GetFileNameWithoutExtension(LogDir);
+
+            // Return
+            NccSpot.NccBeamState state;
+            int layerNumber = Convert.ToInt32(fileName.Split('_')[4]);
+            string layerId;
+
+            if (fileName.Contains("_part_"))
+            {
+                // 0: 20220601(date) && 1: 182105(time) && 2: 461(usec).map && 3: record && 4: LayerNumber(xxxx) && 5: "part" && 6: PartNumber(xx) && 7: "tuning" or "resume" && 8: TuningNumber or ResumeNumber
+
+                int PartNumber = Convert.ToInt32(fileName.Split('_')[6]);
+
+                if (fileName.Contains("tuning"))
+                {
+                    int TuningNumber = Convert.ToInt32(fileName.Split('_')[8]);
+
+                    layerId = layerNumber.ToString() + "_part_" + PartNumber.ToString() + "_tuning_" + TuningNumber.ToString();
+                    state = NccSpot.NccBeamState.Tuning;
+                }
+                else if (fileName.Contains("resume"))
+                {
+                    int ResumeNumber = Convert.ToInt32(fileName.Split('_')[8]);
+
+                    layerId = layerNumber.ToString() + "_part_" + PartNumber.ToString() + "_tuning_" + ResumeNumber.ToString();
+                    state = NccSpot.NccBeamState.Resume;
+                }
+                else
+                {
+                    layerId = layerNumber.ToString() + "_part_" + PartNumber.ToString();
+                    state = NccSpot.NccBeamState.Normal;
+                }
+            }
+            else
+            {
+                if (fileName.Contains("tuning"))
+                {
+                    layerId = layerNumber.ToString() + "_tuning_" + Convert.ToString(Convert.ToInt32(fileName.Split('_')[6]));
+                    state = NccSpot.NccBeamState.Tuning;
+                }
+                else if (fileName.Contains("resume"))
+                {
+                    layerId = layerNumber.ToString() + "_Resume_" + Convert.ToString(Convert.ToInt32(fileName.Split('_')[6]));
+                    state = NccSpot.NccBeamState.Resume;
+                }
+                else
+                {
+                    layerId = Convert.ToString(Convert.ToInt32(fileName.Split('_')[4]));
+                    state = NccSpot.NccBeamState.Normal;
+                }
+            }
+            //layerId = getLayerIdFromLogFileName(Dir);
+            return (state, layerNumber, layerId);
+        }
+        private (List<NccLogSpot>, int, string, NccSpot.NccBeamState) LoadLogFile(string recordFileDir, string SpecifFileDir, double coeff_x, double coeff_y)
+        {
+            List<NccLogSpot> logSpots = new List<NccLogSpot>();
+
+            NccSpot.NccBeamState state;
+            int layerNumber;
+            string layerId;
+
+            (state, layerNumber, layerId) = getInfoFromLogFileName(recordFileDir);
+
+            Stream xdrConverter_speicf = File.Open(SpecifFileDir, FileMode.Open);
+            var data_speicf = new XdrConverter_Specific(xdrConverter_speicf);
+
+            Stream xdrConverter_record = File.Open(recordFileDir, FileMode.Open);
+            var data_record = new XdrConverter_Record(xdrConverter_record);
+
+            #region Add logSpots
+            if (data_record.ErrorCheck == false)
+            {
+                List<float> xPositions = new List<float>();
+                List<float> yPositions = new List<float>();
+
+                List<Int64> epochTime = new List<Int64>();
+
+                bool spotContinue = false;
+
+                foreach (var elementData in data_record.elementData)
+                {
+                    if (spotContinue && (elementData.axisDataxPosition == -10000 && elementData.axisDatayPosition == -10000))
+                    {
+                        double tempxPosition;
+                        double tempyPosition;
+                        int templayerNumber;
+                        DateTime tempstartEpochTime;
+                        DateTime tempendEpochTime;
+                        float[] exceptPosition = { -10000 };
+                        xPositions = xPositions.Except(exceptPosition).ToList();
+                        yPositions = yPositions.Except(exceptPosition).ToList();
+
+                        if (xPositions.Count() == 0)
+                        {
+                            tempxPosition = -10000;
+                        }
+                        else
+                        {
+                            tempxPosition = xPositions.Average();
+                        }
+                        if (yPositions.Count() == 0)
+                        {
+                            tempyPosition = -10000;
+                        }
+                        else
+                        {
+                            tempyPosition = yPositions.Average();
+                        }
+                        tempstartEpochTime = DateTimeOffset.FromUnixTimeMilliseconds(Convert.ToInt64(epochTime.First())).UtcDateTime;
+                        tempendEpochTime = DateTimeOffset.FromUnixTimeMilliseconds(Convert.ToInt64(epochTime.Last())).UtcDateTime;
+
+                        templayerNumber = layerNumber;
+
+                        xPositions.Clear();
+                        yPositions.Clear();
+                        epochTime.Clear();
+
+                        logSpots.Add(new NccLogSpot(templayerNumber, layerId, ((tempyPosition - data_speicf.icyOffset) * coeff_y), ((tempxPosition - data_speicf.icxOffset) * coeff_x), state, tempstartEpochTime, tempendEpochTime));
+                        spotContinue = false;
+                    }
+
+                    if (!spotContinue && (elementData.axisDataxPosition != -10000 || elementData.axisDatayPosition != -10000))
+                    {
+                        spotContinue = true;
+                    }
+
+                    if (spotContinue)
+                    {
+                        xPositions.Add(elementData.axisDataxPosition);
+                        yPositions.Add(elementData.axisDatayPosition);
+                        epochTime.Add(XdrConverter_Record.XdrRead.ToLong(elementData.epochTimeData, elementData.nrOfMicrosecsData));
+                    }
+                }
+
+                if (epochTime.Count != 0)
+                {
+                    double tempxPosition;
+                    double tempyPosition;
+                    int templayerNumber;
+                    DateTime tempstartEpochTime;
+                    DateTime tempendEpochTime;
+                    float[] exceptPosition = { -10000 };
+                    xPositions = xPositions.Except(exceptPosition).ToList();
+                    yPositions = yPositions.Except(exceptPosition).ToList();
+
+                    if (xPositions.Count() == 0)
+                    {
+                        tempxPosition = -10000;
+                    }
+                    else
+                    {
+                        tempxPosition = xPositions.Average();
+                    }
+                    if (yPositions.Count() == 0)
+                    {
+                        tempyPosition = -10000;
+                    }
+                    else
+                    {
+                        tempyPosition = yPositions.Average();
+                    }
+                    tempstartEpochTime = DateTimeOffset.FromUnixTimeMilliseconds(Convert.ToInt64(epochTime.First())).UtcDateTime;
+                    tempendEpochTime = DateTimeOffset.FromUnixTimeMilliseconds(Convert.ToInt64(epochTime.Last())).UtcDateTime;
+
+                    templayerNumber = layerNumber;
+
+                    xPositions.Clear();
+                    yPositions.Clear();
+                    epochTime.Clear();
+
+                    logSpots.Add(new NccLogSpot(templayerNumber, layerId, ((tempyPosition - data_speicf.icyOffset) * coeff_y), ((tempxPosition - data_speicf.icxOffset) * coeff_x), state, tempstartEpochTime, tempendEpochTime));
+                    spotContinue = false;
+                }
+            }
+            #endregion
+
+            return (logSpots, layerNumber, layerId, state);
+        }
+        private List<NccSpot> mergePlanLog(List<NccLogSpot> logSpots, List<NccPlanSpot> planSpots)
+        {
+            List<NccSpot> nccSpot = new List<NccSpot>();
+            double layerEnergy = planSpots[0].LayerEnergy;
+
+            foreach (NccLogSpot logSpot in logSpots)
+            {
+                foreach (NccPlanSpot planSpot in planSpots)
+                {
+                    double distance = Math.Sqrt(Math.Pow(logSpot.XPosition - planSpot.Xposition, 2) + Math.Pow(logSpot.YPosition - planSpot.Yposition, 2));
+                    if (distance <= ToleranceDistBetweenPlanAndLogSpot)
+                    {
+                        nccSpot.Add(new NccSpot(planSpot, logSpot));
+                        break;
+                    }
+                }
+            }
+
+            return nccSpot;
+        }
+        #endregion
     }
 
     /// <summary>
     /// Dicom, Plan, Log, PG
     /// </summary>
-    public class NccSession:Session
+    public class NccSession : Session
     {
-        private static double ToleranceDistBetweenPlanAndLogSpot = 3;
-
-        private List<NccLayer> layers = new List<NccLayer>(); //////////////
+        private List<NccLayer> layers = new List<NccLayer>();
         public List<NccLayer> Layers
-        { 
-            get 
-            { 
-                return layers; 
-            } 
+        {
+            get
+            {
+                return layers;
+            }
         }
 
         private NccPlan plan = new NccPlan("");
 
+        public List<PGSpot> PGspots = new List<PGSpot>(); ///////////////////// temp
+
+
+
         private DateTime firstLayerFirstSpotLogTime;
 
         public bool IsPlanLoad { get; private set; }
-
+        public bool IsPGLoad { get; private set; }
         public bool IsConfigLogFileLoad { get; private set; }
 
         public bool IsGetReferenceTime { get; private set; }
 
-      
+
         private NccLogParameter logParameter = new NccLogParameter();
 
-        
+
         /// <summary>
         /// Load plan file
         /// if plan is loaded return true
@@ -157,7 +386,7 @@ namespace HUREL.PG.Ncc
                     Debug.WriteLine(ex.Message);
                     return false;
                 }
-                
+
                 IsPlanLoad = true;
 
                 return true;
@@ -168,12 +397,11 @@ namespace HUREL.PG.Ncc
             }
             else
             {
-                IsPlanLoad = false;                
-            }            
+                IsPlanLoad = false;
+            }
 
             return false;
         }
-
         public bool LoadConfigLogFile(string configFileDir)
         {
             // Log Config File Example
@@ -239,7 +467,6 @@ namespace HUREL.PG.Ncc
             }
             return false;
         }
-  
         public bool LoadRecordSpecifLogFile(string recordFileDir, string SpecifFileDir)
         {
             #region Check loaded log files whether valid or invalid
@@ -286,10 +513,10 @@ namespace HUREL.PG.Ncc
                 return false;
             }
 
-            foreach(var chklayer in layers)
+            foreach (var chklayer in layers)
             {
-                var layerInfo = getLayerIdFromLogFileName(recordFileDir);
-                if (chklayer.LayerId == layerInfo)
+                (var beamState, var layerNumber, var layerId) = getInfoFromLogFileName(recordFileDir);
+                if (chklayer.LayerId == layerId)
                 {
                     Debug.WriteLine("Layer file is already loaded");
                     return true;
@@ -297,40 +524,42 @@ namespace HUREL.PG.Ncc
             }
             #endregion
 
-            (List<NccLogSpot> logSpots, int logLayerNumber, NccSpot.NccBeamState state) = getLogSpotData(recordFileDir, SpecifFileDir);
-            (List<NccPlanSpot> planSpots, double planLayerEnergy) = plan.GetPlanSpotsByLayerNumber(logLayerNumber);
-            List<NccSpot> nccSpot = mergePlanLog(logSpots, planSpots);
-
-            NccLayer layer = new NccLayer(nccSpot, logLayerNumber, planLayerEnergy);
+            NccLayer layer = new NccLayer(recordFileDir, SpecifFileDir, logParameter.coeff_x, logParameter.coeff_y, plan);
             layers = insertLayer(layers, layer);
 
             return true;
         }
 
-        #region Load Layer files
-        private List<NccSpot> mergePlanLog(List<NccLogSpot> logSpots, List<NccPlanSpot> planSpots)
+        public bool LoadPGFile(string pgDir)
         {
-            List<NccSpot> nccSpot = new List<NccSpot>();
-            double layerEnergy = planSpots[0].LayerEnergy;
-
-            foreach (NccLogSpot logSpot in logSpots)
+            #region Check Valid
+            if (!File.Exists(pgDir))
             {
-                foreach (NccPlanSpot planSpot in planSpots)
-                {
-                    double distance = Math.Sqrt(Math.Pow(logSpot.XPosition - planSpot.Xposition, 2) + Math.Pow(logSpot.YPosition - planSpot.Yposition, 2));
-                    if (distance <= ToleranceDistBetweenPlanAndLogSpot)
-                    {
-                        nccSpot.Add(new NccSpot(planSpot, logSpot));
-                        break;
-                    }
-                }
+                Debug.Assert(true, $"PG file doesn't exist");
+                return false;
             }
 
-            return nccSpot;
+            if (!Equals(Path.GetExtension(pgDir), ".bin"))
+            {
+                Debug.Assert(true, $"Invalid file extension");
+                return false;
+            }
+            #endregion
+
+            PG pg = new PG(pgDir);
+            PGspots = pg.GetPGSpots();
+
+            IsPGLoad = true;
+
+            return true;
         }
+
+
+        #region private functions
         private List<NccLayer> insertLayer(List<NccLayer> layers, NccLayer nccLayer)
         {
-            NccSpot.NccBeamState state = nccLayer.GetSingleLogInfo();
+            //NccSpot.NccBeamState state = nccLayer.GetSingleLogInfo();
+            NccSpot.NccBeamState state = nccLayer.NccBeamState;
 
             List<int> LayerNumbers = new List<int>(layers.Count);
             foreach (NccLayer layer in layers)
@@ -347,7 +576,7 @@ namespace HUREL.PG.Ncc
                 int insertIndex = 0;
                 if (LayerNumbers.Any(x => x == nccLayer.LayerNumber))
                 {
-                    insertIndex = LayerNumbers.FindIndex(x => x == nccLayer.LayerNumber);                   
+                    insertIndex = LayerNumbers.FindIndex(x => x == nccLayer.LayerNumber);
 
                     List<NccSpot> nccSpot = layers[insertIndex].GetSpot();
                     nccSpot.AddRange(nccLayer.GetSpot());
@@ -361,144 +590,15 @@ namespace HUREL.PG.Ncc
             }
 
             return layers;
-        }       
-        private (List<NccLogSpot>, int, NccSpot.NccBeamState) getLogSpotData(string recordFileDir, string SpecifFileDir)
-        {
-            // Return
-            
-            
-            List<NccLogSpot> logSpots = new List<NccLogSpot>();
-
-            NccSpot.NccBeamState state;
-            int layerNumber;
-            string layerId;
-
-            (state, layerNumber, layerId) = checkByLogFileName(recordFileDir);
-
-            Stream xdrConverter_speicf = File.Open(SpecifFileDir, FileMode.Open);
-            var data_speicf = new XdrConverter_Specific(xdrConverter_speicf);
-
-            Stream xdrConverter_record = File.Open(recordFileDir, FileMode.Open);
-            var data_record = new XdrConverter_Record(xdrConverter_record);
-
-            // Add spot data
-            if (data_record.ErrorCheck == false)
-            {
-                List<float> xPositions = new List<float>();
-                List<float> yPositions = new List<float>();
-
-                List<Int64> epochTime = new List<Int64>();
-
-                bool spotContinue = false;
-
-                //List<LogStruct_NCC> spots = new List<LogStruct_NCC>();
-
-                foreach (var elementData in data_record.elementData)
-                {
-                    if (spotContinue && (elementData.axisDataxPosition == -10000 && elementData.axisDatayPosition == -10000))
-                    {
-                        double tempxPosition;
-                        double tempyPosition;
-                        int templayerNumber;
-                        DateTime tempstartEpochTime;
-                        DateTime tempendEpochTime;
-                        float[] exceptPosition = { -10000 };
-                        xPositions = xPositions.Except(exceptPosition).ToList();
-                        yPositions = yPositions.Except(exceptPosition).ToList();
-
-                        if (xPositions.Count() == 0)
-                        {
-                            tempxPosition = -10000;
-                        }
-                        else
-                        {
-                            tempxPosition = xPositions.Average();
-                        }
-                        if (yPositions.Count() == 0)
-                        {
-                            tempyPosition = -10000;
-                        }
-                        else
-                        {
-                            tempyPosition = yPositions.Average();
-                        }
-                        tempstartEpochTime = DateTimeOffset.FromUnixTimeMilliseconds(Convert.ToInt64(epochTime.First())).UtcDateTime;
-                        tempendEpochTime = DateTimeOffset.FromUnixTimeMilliseconds(Convert.ToInt64(epochTime.Last())).UtcDateTime;
-
-                        templayerNumber = layerNumber;
-
-                        xPositions.Clear();
-                        yPositions.Clear();
-                        epochTime.Clear();
-
-                        logSpots.Add(new NccLogSpot(templayerNumber, layerId, ((tempyPosition - data_speicf.icyOffset) * logParameter.coeff_y), ((tempxPosition - data_speicf.icxOffset) * logParameter.coeff_x), state, tempstartEpochTime, tempendEpochTime));
-                        spotContinue = false;
-                    }
-
-                    if (!spotContinue && (elementData.axisDataxPosition != -10000 || elementData.axisDatayPosition != -10000))
-                    {
-                        spotContinue = true;
-                    }
-
-                    if (spotContinue)
-                    {
-                        xPositions.Add(elementData.axisDataxPosition);
-                        yPositions.Add(elementData.axisDatayPosition);
-                        epochTime.Add(XdrConverter_Record.XdrRead.ToLong(elementData.epochTimeData, elementData.nrOfMicrosecsData));
-                    }
-                }
-
-                if (epochTime.Count != 0)
-                {
-                    double tempxPosition;
-                    double tempyPosition;
-                    int templayerNumber;
-                    DateTime tempstartEpochTime;
-                    DateTime tempendEpochTime;
-                    float[] exceptPosition = { -10000 };
-                    xPositions = xPositions.Except(exceptPosition).ToList();
-                    yPositions = yPositions.Except(exceptPosition).ToList();
-
-                    if (xPositions.Count() == 0)
-                    {
-                        tempxPosition = -10000;
-                    }
-                    else
-                    {
-                        tempxPosition = xPositions.Average();
-                    }
-                    if (yPositions.Count() == 0)
-                    {
-                        tempyPosition = -10000;
-                    }
-                    else
-                    {
-                        tempyPosition = yPositions.Average();
-                    }
-                    tempstartEpochTime = DateTimeOffset.FromUnixTimeMilliseconds(Convert.ToInt64(epochTime.First())).UtcDateTime;
-                    tempendEpochTime = DateTimeOffset.FromUnixTimeMilliseconds(Convert.ToInt64(epochTime.Last())).UtcDateTime;
-
-                    templayerNumber = layerNumber;
-
-                    xPositions.Clear();
-                    yPositions.Clear();
-                    epochTime.Clear();
-
-                    logSpots.Add(new NccLogSpot(templayerNumber, layerId, ((tempyPosition - data_speicf.icyOffset) * logParameter.coeff_y), ((tempxPosition - data_speicf.icxOffset) * logParameter.coeff_x), state, tempstartEpochTime, tempendEpochTime));
-                    spotContinue = false;
-                }
-            }
-
-            return (logSpots, layerNumber, state);
         }
-        private (NccSpot.NccBeamState, int, string) checkByLogFileName(string Dir)
+        private (NccSpot.NccBeamState, int, string) getInfoFromLogFileName(string LogDir)
         {
-            string fileName = Path.GetFileNameWithoutExtension(Dir);
+            string fileName = Path.GetFileNameWithoutExtension(LogDir);
 
             // Return
             NccSpot.NccBeamState state;
             int layerNumber = Convert.ToInt32(fileName.Split('_')[4]);
-            string layerId;            
+            string layerId;
 
             if (fileName.Contains("_part_"))
             {
@@ -544,25 +644,30 @@ namespace HUREL.PG.Ncc
                     state = NccSpot.NccBeamState.Normal;
                 }
             }
-            layerId = getLayerIdFromLogFileName(Dir);
+            //layerId = getLayerIdFromLogFileName(Dir);
             return (state, layerNumber, layerId);
         }
         #endregion
+
         private struct NccLogParameter
         {
             public double coeff_x;
             public double coeff_y;
             public DateTime TimeREF; // 나중에 쓰일것
-        }    
+        }
     }
 
 
 
     public class NccPlan
     {
+        public string? PlanFile { get; private set; }
+        public double TotalPlanMonitoringUnit { get; }
+        public int TotalPlanLayer { get; }
+
         private List<NccPlanSpot> spots = new List<NccPlanSpot>();
         public NccPlan(string planFile)
-        {    
+        {
             if (planFile != null & planFile != "")
             {
                 PlanFile = planFile;
@@ -615,8 +720,7 @@ namespace HUREL.PG.Ncc
                 TotalPlanLayer = 0;
                 TotalPlanLayer = spots.Last().LayerNumber;
             }
-        }        
-        public string? PlanFile { get; private set; }      
+        }
         public (List<NccPlanSpot>, double layerEnergy) GetPlanSpotsByLayerNumber(int layerNumber)
         {
             List<NccPlanSpot> planSpotSingleLayer = (from planSpots in spots
@@ -626,15 +730,110 @@ namespace HUREL.PG.Ncc
 
             return (planSpotSingleLayer, layerEnergy);
         }
-        public double TotalPlanMonitoringUnit { get; }                    
-        public int TotalPlanLayer { get; }
+    }
+
+    public class PG
+    {
+        public string? PGDir { get; private set; }
+
+        private List<PGSpot> spots = new List<PGSpot>();
+        public PG(string pgDir)
+        {
+            if (pgDir != null & pgDir != "")
+            {
+                PGDir = pgDir;
+
+                using BinaryReader br = new BinaryReader(File.Open(pgDir, FileMode.Open));
+                {
+                    long length = br.BaseStream.Length;
+                    byte[] buffer = new byte[1024 * 1024 * 1000];
+                    buffer = br.ReadBytes(Convert.ToInt32(length));
+
+                    byte[] DATA_BUFFER = new byte[334];
+                    ushort[] SDATA_BUFFER = new ushort[167];
+
+                    int CurrentPos = 0;
+
+                    while (CurrentPos < length)
+                    {
+                        if (buffer[CurrentPos] == 0xFE)
+                        {
+                            CurrentPos += 1;
+
+                            if (buffer[CurrentPos] == 0xFE)
+                            {
+                                int[] ChannelCount = new int[144];
+                                int TriggerStartTime = new int();
+                                int TriggerEndTime = new int();
+                                double ADC = new double();
+
+                                int SumCounts = new int();
+
+                                for (int i = 0; i < 334; i++)
+                                {
+                                    CurrentPos += 1;
+                                    DATA_BUFFER[i] = buffer[CurrentPos];
+                                }
+                                Buffer.BlockCopy(DATA_BUFFER, 0, SDATA_BUFFER, 0, DATA_BUFFER.Length);
+
+                                for (int ch = 0; ch < 72; ch++)
+                                {
+                                    ChannelCount[ch] = SDATA_BUFFER[ch];
+                                }
+                                for (int ch = 81; ch < 153; ch++)
+                                {
+                                    ChannelCount[ch - 9] = SDATA_BUFFER[ch];
+                                }
+                                uint time_count = ((uint)SDATA_BUFFER[79] << 16) | SDATA_BUFFER[78];
+
+                                TriggerStartTime = Convert.ToInt32(time_count);
+                                TriggerEndTime = Convert.ToInt32(time_count + (((uint)((uint)SDATA_BUFFER[166] << 16) | ((uint)SDATA_BUFFER[165])) * 10));
+                                ADC = (double)SDATA_BUFFER[76] / 4096.0 * 5.0;
+
+                                SumCounts = ChannelCount.ToList().Sum();
+
+                                PGSpot pgSpot = new PGSpot(ChannelCount, SumCounts, TriggerStartTime, TriggerEndTime, ADC);
+                                spots.Add(pgSpot);
+                            }
+                            else
+                            {
+                                CurrentPos += 1;
+                            }
+                        }
+                        else
+                        {
+                            CurrentPos += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        public List<PGSpot> GetPGSpots()
+        {
+            return spots;
+        }
+
+        private struct PGstruct // Tick?
+        {
+            public int[] ChannelCount;
+            public int TriggerStartTime;
+            public int TriggerEndTime;
+            public double ADC;
+
+            public int Tick;
+        }
     }
 
     public record NccLogSpot(int LayerNumber = -1, string LayerID = "", double XPosition = 0, double YPosition = 0,
-                                        NccSpot.NccBeamState State = NccSpot.NccBeamState.Unknown, DateTime StartTime = new DateTime(), DateTime EndTime = new DateTime());
-    
+                             NccSpot.NccBeamState State = NccSpot.NccBeamState.Unknown, DateTime StartTime = new DateTime(), DateTime EndTime = new DateTime());
+
     public record NccPlanSpot(int LayerNumber = -1, double LayerEnergy = 0, double LayerMU = 0, int LayerSpotCount = 0,
-                              double Xposition = 0, double Yposition =0, double Zposition = 0, double MonitoringUnit = 0);
-    
+                              double Xposition = 0, double Yposition = 0, double Zposition = 0, double MonitoringUnit = 0);
+
+    public record PGSpot(int[] ChannelCount, int SumCounts, int TriggerStartTime = 0, int TriggerEndTime = 0, double ADC = 0, int Tick = 0);
+
+
+
 
 }
