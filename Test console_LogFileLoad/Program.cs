@@ -5,11 +5,12 @@ using HUREL.PG.Ncc;
 // Verification with Box 2Gy file
 NccSession session = new NccSession();
 
+#region Plan File Name definition
 string planFileFolder = @"Test Files\";
 string planFileName = @"3DplotMultiSBox2Gy.pld";
 string planFileDir = string.Concat(planFileFolder, planFileName);
-bool flag_plan = session.LoadPlanFile(planFileDir);
-
+#endregion
+#region Log File Name definition
 string logFileFolder = @"Test Files\";
 string configLogFileName = @"20210327_212007_821.idt_config.csv";
 string recordLogFileName1 = @"20210327_212007_821.map_record_0007.xdr";
@@ -42,6 +43,15 @@ string specifLogFile4 = string.Concat(logFileFolder, specifLogFileName4);
 
 string recordLogFile5 = string.Concat(logFileFolder, recordLogFileName5);
 string specifLogFile5 = string.Concat(logFileFolder, specifLogFileName5);
+#endregion
+#region PG file definition
+string pgFileFolder = @"Test Files\";
+string pgFileName = @"Box2Gy_QuadLocalShift_1.bin";
+string pgFileDir = string.Concat(pgFileFolder, pgFileName);
+#endregion
+
+
+bool flag_plan = session.LoadPlanFile(planFileDir);
 
 bool flag_config = session.LoadConfigLogFile(configLogFile);
 bool flag_recordspecif1 = session.LoadRecordSpecifLogFile(recordLogFile1, specifLogFile1);
@@ -51,9 +61,11 @@ bool flag_recordspecif4 = session.LoadRecordSpecifLogFile(recordLogFile4, specif
 bool flag_recordspecif5 = session.LoadRecordSpecifLogFile(recordLogFile5, specifLogFile5);
 bool flag_recordspecif6 = session.LoadRecordSpecifLogFile(recordLogFile1, specifLogFile1);
 
+bool flag_pgFile = session.LoadPGFile(pgFileDir);
+
 foreach (NccLayer layer in session.Layers)
 {
-    Console.WriteLine($"Layer: {layer.LayerNumber}, Energy: {layer.PlanEnergy}, Spot: {layer.GetSpot().Count}");   
+    Console.WriteLine($"Layer: {layer.LayerNumber}, Energy: {layer.LayerEnergy}, Spot: {layer.GetSpot().Count}");
 }
-
+Console.WriteLine($"FPGA data lines: {session.PGspots.Count()}");
 
