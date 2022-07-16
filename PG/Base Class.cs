@@ -23,18 +23,6 @@
             string str = string.Empty;
             return str;
         }
-        public virtual void SetLayerNumber(int layerNumber)
-        {
-            LayerNumber = layerNumber;
-        }
-        public virtual void SetLayerId(string layerId)
-        {
-            LayerId = layerId;
-        }
-        public virtual void SetLayerEnergy(double layerEnergy)
-        {
-            LayerEnergy = layerEnergy;
-        }
     }
     public abstract class Session
     {

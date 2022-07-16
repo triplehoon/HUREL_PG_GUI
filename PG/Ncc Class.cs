@@ -62,27 +62,47 @@ namespace HUREL.PG.Ncc
 
     public class NccLayer : Layer
     {
+        private static double ToleranceDistBetweenPlanAndLogSpot = 3;
         public NccLayer(string recordFileDir, string SpecifFileDir, double coeff_x, double coeff_y, NccPlan plan)
         {
-            (List<NccLogSpot> logSpots, int layerNumber, string layerId, NccSpot.NccBeamState state) = LoadLogFile(recordFileDir, SpecifFileDir, coeff_x, coeff_y);
-            (List<NccPlanSpot> planSpots, double planLayerEnergy) = plan.GetPlanSpotsByLayerNumber(layerNumber);
-            spots = mergePlanLog(logSpots, planSpots);
+            logSpots = new List<NccLogSpot>();
 
-            SetLayerEnergy(planLayerEnergy);
-            SetLayerNumber(layerNumber);
-            SetLayerId(layerId);
+            if (LoadLogFile(recordFileDir, SpecifFileDir, coeff_x, coeff_y))
+            {
+                IsLayerValid = false;
+            };
+            (List<NccPlanSpot> planSpots, double planLayerEnergy) = plan.GetPlanSpotsByLayerNumber(LayerNumber);
+            spots = new List<NccSpot>();
 
-            BeamStateNumber = -999999; // use?
-            NccBeamState = state;
+            foreach (NccLogSpot logSpot in logSpots)
+            {
+                foreach (NccPlanSpot planSpot in planSpots)
+                {
+                    double distance = Math.Sqrt(Math.Pow(logSpot.XPosition - planSpot.Xposition, 2) + Math.Pow(logSpot.YPosition - planSpot.Yposition, 2));
+                    if (distance <= ToleranceDistBetweenPlanAndLogSpot)
+                    {
+                        spots.Add(new NccSpot(planSpot, logSpot));
+                        break;
+                    }
+                }
+            }
+            LayerEnergy = planLayerEnergy;
 
-            IsLayerValid = true; // purpose?
+            IsLayerValid = true;
+        }
+        #region Properties
+        private List<NccSpot> spots;
+        public List<NccSpot> Spots
+        {
+            get { return spots; }            
         }
 
-        #region Properties
+        private List<NccLogSpot> logSpots;
+        public List<NccLogSpot> LogSpots
+        {
+            get { return logSpots; }
+        }
 
-        private List<NccSpot> spots;
-
-        private static double ToleranceDistBetweenPlanAndLogSpot = 3;
         public int BeamStateNumber { get; private set; } // not appropriate when part exist
         // (Example) Normal beam: Layer 0, divided into part(1 ~ 3), tunned twice, pause exist
         //   Log file Name (descending time): 
@@ -95,106 +115,101 @@ namespace HUREL.PG.Ncc
         //      0000_part_03.xdr            -> LayerNumber: 0 / partNumber: 3 / NccBeamState: Normal / BeamStateNumber: 3
         //      0000_part_03_resume_01.xdr  -> LayerNumber: 0 / partNumber: 3 / NccBeamState: Resume / BeamStateNumber: 1 ***
         public NccSpot.NccBeamState NccBeamState { get; private set; }
-        public bool IsLayerValid { get; private set; } // purpose?
-
+        public bool IsLayerValid { get; private set; }
+        public int PartNumber { get; private set; }        
         #endregion
-
-        public List<NccSpot> GetSpot()
-        {
-            return spots;
-        }
-        public static string GetLayerIdFromLogFileName(string LogDir)
-        {
-            // Return
-            string LayerId = "";
-
-            string LogName = Path.GetFileNameWithoutExtension(LogDir);
-            int layerNumber = Convert.ToInt32(LogName.Split('_')[4]);
-
-            if (LogName.Contains("record"))
-            {
-                int index = LogName.IndexOf("record");
-                LayerId = LogName.Substring(index + "record".Length + 1);
-            }
-            else if (LogName.Contains("specif"))
-            {
-                int index = LogName.IndexOf("specif");
-                LayerId = LogName.Substring(index + "specif".Length + 1);
-            }
-            else
-            {
-                Debug.Assert(true, $"Invalid Log File Name");
-            }
-
-            return LayerId;
-        }
-
-        #region private functions
-        private (NccSpot.NccBeamState, int, string) getInfoFromLogFileName(string LogDir)
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="LogDir"></param>
+        /// <returns>isValid, layerNumber, partNumber, beamStateNumber, layerId, beamState</returns>
+        public static (bool, int, int, int, string, NccSpot.NccBeamState) GetInfoFromLogFileName(string LogDir)
         {
             string fileName = Path.GetFileNameWithoutExtension(LogDir);
 
+            if (Path.GetExtension(LogDir) != "xdr")
+            {
+                return (false, 0, 0, 0, "", NccSpot.NccBeamState.Unknown);
+            }
             // Return
-            NccSpot.NccBeamState state;
-            int layerNumber = Convert.ToInt32(fileName.Split('_')[4]);
+            int layerNumber = Convert.ToInt32(LogDir.Split('_')[4]);
+            int partNumber = 1;
             string layerId;
+            int beamStateNumber = 1;
+            NccSpot.NccBeamState nccBeamState = NccSpot.NccBeamState.Unknown;
 
             if (fileName.Contains("_part_"))
             {
                 // 0: 20220601(date) && 1: 182105(time) && 2: 461(usec).map && 3: record && 4: LayerNumber(xxxx) && 5: "part" && 6: PartNumber(xx) && 7: "tuning" or "resume" && 8: TuningNumber or ResumeNumber
 
-                int PartNumber = Convert.ToInt32(fileName.Split('_')[6]);
+                partNumber = Convert.ToInt32(fileName.Split('_')[6]);
 
                 if (fileName.Contains("tuning"))
                 {
-                    int TuningNumber = Convert.ToInt32(fileName.Split('_')[8]);
-
-                    layerId = layerNumber.ToString() + "_part_" + PartNumber.ToString() + "_tuning_" + TuningNumber.ToString();
-                    state = NccSpot.NccBeamState.Tuning;
+                    beamStateNumber = Convert.ToInt32(fileName.Split('_')[8]);
+                    
+                    layerId = layerNumber.ToString() + "_part_" + partNumber.ToString() + "_tuning_" + beamStateNumber.ToString();
+                    nccBeamState = NccSpot.NccBeamState.Tuning;
                 }
                 else if (fileName.Contains("resume"))
                 {
-                    int ResumeNumber = Convert.ToInt32(fileName.Split('_')[8]);
+                    beamStateNumber = Convert.ToInt32(fileName.Split('_')[8]);
 
-                    layerId = layerNumber.ToString() + "_part_" + PartNumber.ToString() + "_tuning_" + ResumeNumber.ToString();
-                    state = NccSpot.NccBeamState.Resume;
+                    layerId = layerNumber.ToString() + "_part_" + partNumber.ToString() + "_tuning_" + beamStateNumber.ToString();
+                    nccBeamState = NccSpot.NccBeamState.Resume;
                 }
                 else
                 {
-                    layerId = layerNumber.ToString() + "_part_" + PartNumber.ToString();
-                    state = NccSpot.NccBeamState.Normal;
+                    layerId = layerNumber.ToString() + "_part_" + partNumber.ToString();
+                    nccBeamState = NccSpot.NccBeamState.Normal;
                 }
+
             }
             else
             {
                 if (fileName.Contains("tuning"))
                 {
                     layerId = layerNumber.ToString() + "_tuning_" + Convert.ToString(Convert.ToInt32(fileName.Split('_')[6]));
-                    state = NccSpot.NccBeamState.Tuning;
+                    nccBeamState = NccSpot.NccBeamState.Tuning;
                 }
                 else if (fileName.Contains("resume"))
                 {
                     layerId = layerNumber.ToString() + "_Resume_" + Convert.ToString(Convert.ToInt32(fileName.Split('_')[6]));
-                    state = NccSpot.NccBeamState.Resume;
+                    nccBeamState = NccSpot.NccBeamState.Resume;
                 }
                 else
                 {
                     layerId = Convert.ToString(Convert.ToInt32(fileName.Split('_')[4]));
-                    state = NccSpot.NccBeamState.Normal;
+                    nccBeamState = NccSpot.NccBeamState.Normal;
                 }
             }
-            //layerId = getLayerIdFromLogFileName(Dir);
-            return (state, layerNumber, layerId);
+
+            return (true, layerNumber, partNumber, beamStateNumber, layerId, nccBeamState);
         }
-        private (List<NccLogSpot>, int, string, NccSpot.NccBeamState) LoadLogFile(string recordFileDir, string SpecifFileDir, double coeff_x, double coeff_y)
+        #region private functions
+        private bool LoadLogFile(string recordFileDir, string SpecifFileDir, double coeff_x, double coeff_y)
         {
-            List<NccLogSpot> logSpots = new List<NccLogSpot>();
-
-            NccSpot.NccBeamState state;
+            
+            bool isValidId = false;
             int layerNumber;
+            int partNumber;
+            int beamStateNumber;           
             string layerId;
+            NccSpot.NccBeamState state;
 
-            (state, layerNumber, layerId) = getInfoFromLogFileName(recordFileDir);
+            (isValidId, layerNumber, partNumber, beamStateNumber, layerId, state) = GetInfoFromLogFileName(recordFileDir);
+
+            if (!isValidId)
+            {
+                return false;
+            }
+
+            LayerNumber = layerNumber;
+            PartNumber = partNumber;
+            BeamStateNumber = beamStateNumber;
+            LayerId = layerId;
+            NccBeamState = state;
 
             Stream xdrConverter_speicf = File.Open(SpecifFileDir, FileMode.Open);
             var data_speicf = new XdrConverter_Specific(xdrConverter_speicf);
@@ -307,29 +322,8 @@ namespace HUREL.PG.Ncc
                     spotContinue = false;
                 }
             }
-            #endregion
-
-            return (logSpots, layerNumber, layerId, state);
-        }
-        private List<NccSpot> mergePlanLog(List<NccLogSpot> logSpots, List<NccPlanSpot> planSpots)
-        {
-            List<NccSpot> nccSpot = new List<NccSpot>();
-            double layerEnergy = planSpots[0].LayerEnergy;
-
-            foreach (NccLogSpot logSpot in logSpots)
-            {
-                foreach (NccPlanSpot planSpot in planSpots)
-                {
-                    double distance = Math.Sqrt(Math.Pow(logSpot.XPosition - planSpot.Xposition, 2) + Math.Pow(logSpot.YPosition - planSpot.Yposition, 2));
-                    if (distance <= ToleranceDistBetweenPlanAndLogSpot)
-                    {
-                        nccSpot.Add(new NccSpot(planSpot, logSpot));
-                        break;
-                    }
-                }
-            }
-
-            return nccSpot;
+            #endregion           
+            return true;
         }
         #endregion
     }
@@ -350,8 +344,15 @@ namespace HUREL.PG.Ncc
 
         private NccPlan plan = new NccPlan("");
 
-        public List<PGSpot> PGspots = new List<PGSpot>(); ///////////////////// temp
-
+        
+        private NccMultislitPg? pgData = null;
+        public NccMultislitPg? MultislitPgData
+        {
+            get
+            {
+                return pgData;
+            }
+        }
 
 
         private DateTime firstLayerFirstSpotLogTime;
@@ -364,8 +365,6 @@ namespace HUREL.PG.Ncc
 
 
         private NccLogParameter logParameter = new NccLogParameter();
-
-
         /// <summary>
         /// Load plan file
         /// if plan is loaded return true
@@ -467,56 +466,71 @@ namespace HUREL.PG.Ncc
             }
             return false;
         }
-        public bool LoadRecordSpecifLogFile(string recordFileDir, string SpecifFileDir)
+        public bool LoadRecordSpecifLogFile(string recordFileDir, string specifFileDir)
         {
             #region Check loaded log files whether valid or invalid
 
             if (!File.Exists(recordFileDir))
             {
-                Debug.Assert(true, $"Log(record) file doesn't exist");
+                Debug.WriteLine($"Log(record) file doesn't exist");
                 return false;
             }
 
-            if (!File.Exists(SpecifFileDir))
+            if (!File.Exists(specifFileDir))
             {
-                Debug.Assert(true, $"Log(specif) file doesn't exist");
+                Debug.WriteLine($"Log(specif) file doesn't exist");
                 return false;
             }
 
             if (IsPlanLoad == false)
             {
-                Debug.Assert(true, $"Plan is not loaded");
+                Debug.WriteLine($"Plan is not loaded");
                 return false;
             }
 
             if (IsConfigLogFileLoad == false)
             {
-                Debug.Assert(true, $"Log(config) is not loaded");
+                Debug.WriteLine($"Log(config) is not loaded");
                 return false;
             }
 
             if (!recordFileDir.Contains("map_record_"))
             {
-                Debug.Assert(true, $"Log(record) is not invalid");
+                Debug.WriteLine($"Log(record) is not invalid");
                 return false;
             }
 
-            if (!SpecifFileDir.Contains("map_specif_"))
+            if (!specifFileDir.Contains("map_specif_"))
             {
-                Debug.Assert(true, $"Log(specif) is not invalid");
+                Debug.WriteLine($"Log(specif) is not invalid");
+                return false;
+            }
+            bool chkLayerFileValid;
+            string recordLayerId;
+            string specifLayerId;
+            (chkLayerFileValid, _, _, _, recordLayerId, _) = NccLayer.GetInfoFromLogFileName(recordFileDir);
+            if (!chkLayerFileValid)
+            {
+                Debug.Assert(!chkLayerFileValid, "record file is not valid");
+                return false;
+            }
+            (chkLayerFileValid, _, _, _, specifLayerId, _) = NccLayer.GetInfoFromLogFileName(specifFileDir);
+            if (!chkLayerFileValid)
+            {
+                Debug.Assert(!chkLayerFileValid, "record file is not valid");
                 return false;
             }
 
-            if (NccLayer.GetLayerIdFromLogFileName(recordFileDir) != NccLayer.GetLayerIdFromLogFileName(SpecifFileDir))
+            if (recordLayerId != specifLayerId)
             {
-                Debug.Assert(true, $"LayerId(record) != LayerId(specif)");
+                Debug.WriteLine($"LayerId(record) != LayerId(specif)");
                 return false;
             }
 
             foreach (var chklayer in layers)
             {
-                (var beamState, var layerNumber, var layerId) = getInfoFromLogFileName(recordFileDir);
-                if (chklayer.LayerId == layerId)
+                (_, _, _, _, string layerID, _) = NccLayer.GetInfoFromLogFileName(recordLayerId);
+                if (chklayer.LayerId == layerID)
                 {
                     Debug.WriteLine("Layer file is already loaded");
                     return true;
@@ -524,129 +538,65 @@ namespace HUREL.PG.Ncc
             }
             #endregion
 
-            NccLayer layer = new NccLayer(recordFileDir, SpecifFileDir, logParameter.coeff_x, logParameter.coeff_y, plan);
-            layers = insertLayer(layers, layer);
+            NccLayer loadedLayer = new NccLayer(recordFileDir, specifFileDir, logParameter.coeff_x, logParameter.coeff_y, plan);
+            //NccSpot.NccBeamState state = nccLayer.GetSingleLogInfo();
+            NccSpot.NccBeamState state = loadedLayer.NccBeamState;
+
+            List<int> LayerNumbers = new List<int>(layers.Count);
+            foreach (NccLayer chklayer in layers)
+            {
+                LayerNumbers.Add(chklayer.LayerNumber);
+            }
+
+            if (layers.Count == 0)
+            {
+                layers.Add(loadedLayer);
+            }
+            else
+            {
+                int insertIndex = 0;
+                if (LayerNumbers.Any(x => x == loadedLayer.LayerNumber))
+                {
+                    insertIndex = LayerNumbers.FindIndex(x => x == loadedLayer.LayerNumber);
+
+                    List<NccSpot> nccSpot = layers[insertIndex].Spots;
+                    nccSpot.AddRange(loadedLayer.Spots);
+                    nccSpot.OrderBy(x => x.BeamStartTime);
+                }
+                else
+                {
+                    insertIndex = LayerNumbers.Where(x => x < loadedLayer.LayerNumber).Count();
+                    layers.Insert(insertIndex, loadedLayer);
+                }
+            }
+
 
             return true;
         }
-
         public bool LoadPGFile(string pgDir)
         {
             #region Check Valid
             if (!File.Exists(pgDir))
             {
-                Debug.Assert(true, $"PG file doesn't exist");
+                Debug.WriteLine($"PG file doesn't exist");
                 return false;
             }
 
             if (!Equals(Path.GetExtension(pgDir), ".bin"))
             {
-                Debug.Assert(true, $"Invalid file extension");
+                Debug.WriteLine($"Invalid file extension");
                 return false;
             }
             #endregion
-
-            PG pg = new PG(pgDir);
-            PGspots = pg.GetPGSpots();
+            pgData = new NccMultislitPg(pgDir);
 
             IsPGLoad = true;
 
             return true;
         }
 
-
         #region private functions
-        private List<NccLayer> insertLayer(List<NccLayer> layers, NccLayer nccLayer)
-        {
-            //NccSpot.NccBeamState state = nccLayer.GetSingleLogInfo();
-            NccSpot.NccBeamState state = nccLayer.NccBeamState;
-
-            List<int> LayerNumbers = new List<int>(layers.Count);
-            foreach (NccLayer layer in layers)
-            {
-                LayerNumbers.Add(layer.LayerNumber);
-            }
-
-            if (layers.Count == 0)
-            {
-                layers.Add(nccLayer);
-            }
-            else
-            {
-                int insertIndex = 0;
-                if (LayerNumbers.Any(x => x == nccLayer.LayerNumber))
-                {
-                    insertIndex = LayerNumbers.FindIndex(x => x == nccLayer.LayerNumber);
-
-                    List<NccSpot> nccSpot = layers[insertIndex].GetSpot();
-                    nccSpot.AddRange(nccLayer.GetSpot());
-                    nccSpot.OrderBy(x => x.BeamStartTime);
-                }
-                else
-                {
-                    insertIndex = LayerNumbers.Where(x => x < nccLayer.LayerNumber).Count();
-                    layers.Insert(insertIndex, nccLayer);
-                }
-            }
-
-            return layers;
-        }
-        private (NccSpot.NccBeamState, int, string) getInfoFromLogFileName(string LogDir)
-        {
-            string fileName = Path.GetFileNameWithoutExtension(LogDir);
-
-            // Return
-            NccSpot.NccBeamState state;
-            int layerNumber = Convert.ToInt32(fileName.Split('_')[4]);
-            string layerId;
-
-            if (fileName.Contains("_part_"))
-            {
-                // 0: 20220601(date) && 1: 182105(time) && 2: 461(usec).map && 3: record && 4: LayerNumber(xxxx) && 5: "part" && 6: PartNumber(xx) && 7: "tuning" or "resume" && 8: TuningNumber or ResumeNumber
-
-                int PartNumber = Convert.ToInt32(fileName.Split('_')[6]);
-
-                if (fileName.Contains("tuning"))
-                {
-                    int TuningNumber = Convert.ToInt32(fileName.Split('_')[8]);
-
-                    layerId = layerNumber.ToString() + "_part_" + PartNumber.ToString() + "_tuning_" + TuningNumber.ToString();
-                    state = NccSpot.NccBeamState.Tuning;
-                }
-                else if (fileName.Contains("resume"))
-                {
-                    int ResumeNumber = Convert.ToInt32(fileName.Split('_')[8]);
-
-                    layerId = layerNumber.ToString() + "_part_" + PartNumber.ToString() + "_tuning_" + ResumeNumber.ToString();
-                    state = NccSpot.NccBeamState.Resume;
-                }
-                else
-                {
-                    layerId = layerNumber.ToString() + "_part_" + PartNumber.ToString();
-                    state = NccSpot.NccBeamState.Normal;
-                }
-            }
-            else
-            {
-                if (fileName.Contains("tuning"))
-                {
-                    layerId = layerNumber.ToString() + "_tuning_" + Convert.ToString(Convert.ToInt32(fileName.Split('_')[6]));
-                    state = NccSpot.NccBeamState.Tuning;
-                }
-                else if (fileName.Contains("resume"))
-                {
-                    layerId = layerNumber.ToString() + "_Resume_" + Convert.ToString(Convert.ToInt32(fileName.Split('_')[6]));
-                    state = NccSpot.NccBeamState.Resume;
-                }
-                else
-                {
-                    layerId = Convert.ToString(Convert.ToInt32(fileName.Split('_')[4]));
-                    state = NccSpot.NccBeamState.Normal;
-                }
-            }
-            //layerId = getLayerIdFromLogFileName(Dir);
-            return (state, layerNumber, layerId);
-        }
+     
         #endregion
 
         private struct NccLogParameter
@@ -732,12 +682,12 @@ namespace HUREL.PG.Ncc
         }
     }
 
-    public class PG
+    public class NccMultislitPg
     {
         public string? PGDir { get; private set; }
 
-        private List<PGSpot> spots = new List<PGSpot>();
-        public PG(string pgDir)
+        private List<PgSpot> spots = new List<PgSpot>();
+        public NccMultislitPg(string pgDir)
         {
             if (pgDir != null & pgDir != "")
             {
@@ -792,7 +742,7 @@ namespace HUREL.PG.Ncc
 
                                 SumCounts = ChannelCount.ToList().Sum();
 
-                                PGSpot pgSpot = new PGSpot(ChannelCount, SumCounts, TriggerStartTime, TriggerEndTime, ADC);
+                                PgSpot pgSpot = new PgSpot(ChannelCount, SumCounts, TriggerStartTime, TriggerEndTime, ADC);
                                 spots.Add(pgSpot);
                             }
                             else
@@ -809,7 +759,7 @@ namespace HUREL.PG.Ncc
             }
         }
 
-        public List<PGSpot> GetPGSpots()
+        public List<PgSpot> GetPGSpots()
         {
             return spots;
         }
@@ -831,7 +781,7 @@ namespace HUREL.PG.Ncc
     public record NccPlanSpot(int LayerNumber = -1, double LayerEnergy = 0, double LayerMU = 0, int LayerSpotCount = 0,
                               double Xposition = 0, double Yposition = 0, double Zposition = 0, double MonitoringUnit = 0);
 
-    public record PGSpot(int[] ChannelCount, int SumCounts, int TriggerStartTime = 0, int TriggerEndTime = 0, double ADC = 0, int Tick = 0);
+    public record PgSpot(int[] ChannelCount, int SumCounts, int TriggerStartTime = 0, int TriggerEndTime = 0, double ADC = 0, int Tick = 0);
 
 
 
