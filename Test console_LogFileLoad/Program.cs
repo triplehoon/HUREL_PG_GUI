@@ -45,7 +45,7 @@ string recordLogFile5 = string.Concat(logFileFolder, recordLogFileName5);
 string specifLogFile5 = string.Concat(logFileFolder, specifLogFileName5);
 #endregion
 #region PG file definition
-string pgFileFolder = @"Test Files\";
+string pgFileFolder = @"D:\OneDrive - 한양대학교\01. Research\01. 통합 제어 프로그램\99. FunctionTest\02. (완료) Shift and merge 디버깅\검증 자료\03. PG\";
 string pgFileName = @"Box2Gy_QuadLocalShift_1.bin";
 string pgFileDir = string.Concat(pgFileFolder, pgFileName);
 #endregion
@@ -67,5 +67,6 @@ foreach (NccLayer layer in session.Layers)
 {
     Console.WriteLine($"Layer: {layer.LayerNumber}, Energy: {layer.LayerEnergy}, Spot: {layer.Spots.Count}");
 }
-Console.WriteLine($"FPGA data lines: {session.PGspots.Count()}");
+//Console.WriteLine($"FPGA data lines: {session.PGspots.Count()}");
+Console.WriteLine($"FPGA data lines: {session.MultislitPgData.GetPGSpots().Count}");
 

@@ -128,12 +128,12 @@ namespace HUREL.PG.Ncc
         {
             string fileName = Path.GetFileNameWithoutExtension(LogDir);
 
-            if (Path.GetExtension(LogDir) != "xdr")
+            if (Path.GetExtension(LogDir) != ".xdr")
             {
                 return (false, 0, 0, 0, "", NccSpot.NccBeamState.Unknown);
             }
             // Return
-            int layerNumber = Convert.ToInt32(LogDir.Split('_')[4]);
+            int layerNumber = Convert.ToInt32(fileName.Split('_')[4]);
             int partNumber = 1;
             string layerId;
             int beamStateNumber = 1;
