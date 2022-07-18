@@ -66,7 +66,6 @@ namespace HUREL.PG.Ncc
         public NccLayer(string recordFileDir, string SpecifFileDir, double coeff_x, double coeff_y, NccPlan plan)
         {
             logSpots = new List<NccLogSpot>();
-
             if (LoadLogFile(recordFileDir, SpecifFileDir, coeff_x, coeff_y))
             {
                 IsLayerValid = false;
@@ -606,8 +605,6 @@ namespace HUREL.PG.Ncc
             public DateTime TimeREF; // 나중에 쓰일것
         }
     }
-
-
 
     public class NccPlan
     {

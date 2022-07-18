@@ -45,9 +45,6 @@ string recordLogFile5 = string.Concat(logFileFolder, recordLogFileName5);
 string specifLogFile5 = string.Concat(logFileFolder, specifLogFileName5);
 #endregion
 #region PG file definition
-string pgFileFolder = @"D:\OneDrive - 한양대학교\01. Research\01. 통합 제어 프로그램\99. FunctionTest\02. (완료) Shift and merge 디버깅\검증 자료\03. PG\";
-string pgFileName = @"Box2Gy_QuadLocalShift_1.bin";
-string pgFileDir = string.Concat(pgFileFolder, pgFileName);
 #endregion
 
 
@@ -61,7 +58,6 @@ bool flag_recordspecif4 = session.LoadRecordSpecifLogFile(recordLogFile4, specif
 bool flag_recordspecif5 = session.LoadRecordSpecifLogFile(recordLogFile5, specifLogFile5);
 bool flag_recordspecif6 = session.LoadRecordSpecifLogFile(recordLogFile1, specifLogFile1);
 
-bool flag_pgFile = session.LoadPGFile(pgFileDir);
 
 foreach (NccLayer layer in session.Layers)
 {
