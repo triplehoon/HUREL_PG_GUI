@@ -66,7 +66,6 @@ namespace HUREL.PG.Ncc
         public NccLayer(string recordFileDir, string SpecifFileDir, double coeff_x, double coeff_y, NccPlan plan)
         {
             logSpots = new List<NccLogSpot>();
-
             if (LoadLogFile(recordFileDir, SpecifFileDir, coeff_x, coeff_y))
             {
                 IsLayerValid = false;
@@ -128,12 +127,12 @@ namespace HUREL.PG.Ncc
         {
             string fileName = Path.GetFileNameWithoutExtension(LogDir);
 
-            if (Path.GetExtension(LogDir) != "xdr")
+            if (Path.GetExtension(LogDir) != ".xdr")
             {
                 return (false, 0, 0, 0, "", NccSpot.NccBeamState.Unknown);
             }
             // Return
-            int layerNumber = Convert.ToInt32(LogDir.Split('_')[4]);
+            int layerNumber = Convert.ToInt32(fileName.Split('_')[4]);
             int partNumber = 1;
             string layerId;
             int beamStateNumber = 1;
@@ -606,8 +605,6 @@ namespace HUREL.PG.Ncc
             public DateTime TimeREF; // 나중에 쓰일것
         }
     }
-
-
 
     public class NccPlan
     {
