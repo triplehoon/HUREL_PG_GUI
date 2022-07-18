@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using static HUREL.PG.Ncc.NccSession;
 
+테스트
 namespace HUREL.PG.Ncc
 {
     public class NccSpot : Spot

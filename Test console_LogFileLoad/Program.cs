@@ -68,5 +68,4 @@ foreach (NccLayer layer in session.Layers)
     Console.WriteLine($"Layer: {layer.LayerNumber}, Energy: {layer.LayerEnergy}, Spot: {layer.Spots.Count}");
 }
 //Console.WriteLine($"FPGA data lines: {session.PGspots.Count()}");
-Console.WriteLine($"FPGA data lines: {session.MultislitPgData.GetPGSpots().Count}");
 
