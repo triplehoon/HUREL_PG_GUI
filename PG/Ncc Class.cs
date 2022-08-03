@@ -52,7 +52,10 @@ namespace HUREL.PG.Ncc
         }
         public enum NccBeamState
         {
-            Normal, Tuning, Resume, Unknown
+            Tuning = 0,
+            Normal = 1, 
+            Resume = 2, 
+            Unknown = 3
         }
         public void ChangeNccBeamState(NccBeamState state)
         {
@@ -66,7 +69,7 @@ namespace HUREL.PG.Ncc
         public NccLayer(string recordFileDir, string SpecifFileDir, double coeff_x, double coeff_y, NccPlan plan)
         {
             logSpots = new List<NccLogSpot>();
-            if (LoadLogFile(recordFileDir, SpecifFileDir, coeff_x, coeff_y))
+            if (!LoadLogFile(recordFileDir, SpecifFileDir, coeff_x, coeff_y))
             {
                 IsLayerValid = false;
             };
@@ -103,16 +106,7 @@ namespace HUREL.PG.Ncc
         }
 
         public int BeamStateNumber { get; private set; } // not appropriate when part exist
-        // (Example) Normal beam: Layer 0, divided into part(1 ~ 3), tunned twice, pause exist
-        //   Log file Name (descending time): 
-        //      0000_part_01_tuning_01.xdr  -> LayerNumber: 0 / partNumber: 1 / NccBeamState: Tuning / BeamStateNumber: 1
-        //      0000_part_01_tuning_02.xdr  -> LayerNumber: 0 / partNumber: 1 / NccBeamState: Tuning / BeamStateNumber: 2
-        //      0000_part_01.xdr            -> LayerNumber: 0 / partNumber: 1 / NccBeamState: Normal / BeamStateNumber: 1
-        //      0000_part_01_resume_01.xdr  -> LayerNumber: 0 / partNumber: 1 / NccBeamState: Resume / BeamStateNumber: 1 ***
-        //      0000_part_01_resume_02.xdr  -> LayerNumber: 0 / partNumber: 1 / NccBeamState: Resume / BeamStateNumber: 2
-        //      0000_part_02.xdr            -> LayerNumber: 0 / partNumber: 2 / NccBeamState: Normal / BeamStateNumber: 2
-        //      0000_part_03.xdr            -> LayerNumber: 0 / partNumber: 3 / NccBeamState: Normal / BeamStateNumber: 3
-        //      0000_part_03_resume_01.xdr  -> LayerNumber: 0 / partNumber: 3 / NccBeamState: Resume / BeamStateNumber: 1 ***
+      
         public NccSpot.NccBeamState NccBeamState { get; private set; }
         public bool IsLayerValid { get; private set; }
         public int PartNumber { get; private set; }        
@@ -330,7 +324,7 @@ namespace HUREL.PG.Ncc
     /// <summary>
     /// Dicom, Plan, Log, PG
     /// </summary>
-    public class NccSession : Session
+    public class NccSession
     {
         private List<NccLayer> layers = new List<NccLayer>();
         public List<NccLayer> Layers
@@ -382,6 +376,7 @@ namespace HUREL.PG.Ncc
                 catch (Exception ex)
                 {
                     Debug.WriteLine(ex.Message);
+                    IsPlanLoad = false;
                     return false;
                 }
 
@@ -541,36 +536,52 @@ namespace HUREL.PG.Ncc
             //NccSpot.NccBeamState state = nccLayer.GetSingleLogInfo();
             NccSpot.NccBeamState state = loadedLayer.NccBeamState;
 
-            List<int> LayerNumbers = new List<int>(layers.Count);
-            foreach (NccLayer chklayer in layers)
-            {
-                LayerNumbers.Add(chklayer.LayerNumber);
-            }
-
-            if (layers.Count == 0)
-            {
-                layers.Add(loadedLayer);
-            }
-            else
-            {
-                int insertIndex = 0;
-                if (LayerNumbers.Any(x => x == loadedLayer.LayerNumber))
-                {
-                    insertIndex = LayerNumbers.FindIndex(x => x == loadedLayer.LayerNumber);
-
-                    List<NccSpot> nccSpot = layers[insertIndex].Spots;
-                    nccSpot.AddRange(loadedLayer.Spots);
-                    nccSpot.OrderBy(x => x.BeamStartTime);
-                }
-                else
-                {
-                    insertIndex = LayerNumbers.Where(x => x < loadedLayer.LayerNumber).Count();
-                    layers.Insert(insertIndex, loadedLayer);
-                }
-            }
+            Layers.Add(loadedLayer);
+            Layers.Sort(SortLayer);
+            
 
 
             return true;
+        }
+        static private int SortLayer(NccLayer layer1, NccLayer layer2)
+        {
+            if (layer1.PartNumber < layer2.PartNumber)
+            {
+                return -1;
+            }
+            if (layer1.PartNumber > layer2.PartNumber)
+            {
+                return 1;
+            }
+
+            if (layer1.LayerNumber < layer2.LayerNumber)
+            {
+                return -1;
+            }
+            if (layer1.LayerNumber > layer2.LayerNumber)
+            {
+                return 1;
+            }
+
+            if (layer1.NccBeamState < layer2.NccBeamState)
+            {
+                return -1;
+            }
+            if (layer1.NccBeamState > layer2.NccBeamState)
+            {
+                return 1;
+            }
+
+            if (layer1.BeamStateNumber < layer2.BeamStateNumber)
+            {
+                return -1;
+            }
+            if (layer1.BeamStateNumber > layer2.BeamStateNumber)
+            {
+                return 1;
+            }
+            return 0;
+
         }
         public bool LoadPGFile(string pgDir)
         {
@@ -629,7 +640,10 @@ namespace HUREL.PG.Ncc
                         int TempLayerNumber = 0;
 
                         tempString = sr.ReadLine()!.Split(",");
-
+                        if (tempString.Length != 5 || tempString[0] != "Layer")
+                        {
+                            throw new Exception("Not a 3D pld");
+                        }
                         double LayerEnergy = Convert.ToDouble(tempString[2]);
                         double LayerMU = Convert.ToDouble(tempString[3]);
                         int LayerSpotCount = Convert.ToInt32(tempString[4]) / 2;

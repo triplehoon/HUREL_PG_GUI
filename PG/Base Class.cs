@@ -24,10 +24,6 @@
             return str;
         }
     }
-    public abstract class Session
-    {
-
-    }
 
 
 

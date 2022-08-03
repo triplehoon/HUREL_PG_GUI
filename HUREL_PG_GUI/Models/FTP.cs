@@ -21,7 +21,7 @@ namespace HUREL.PG.Ncc
         public static event SyncAndDownloadLogHandler NewLogFileReceived;
 
 
-        private static Session ftpSession = null;
+        private static WinSCP.Session ftpSession = null;
         private static bool IsSessionOpen = false;
 
         public static (bool, string) OpenFtpSession(string hostName = "10.1.30.80", string userName = "clinical", string passWord = "Madne55")
@@ -38,8 +38,8 @@ namespace HUREL.PG.Ncc
             };
 
             try
-            {
-                ftpSession = new Session();
+            {                
+                ftpSession = new WinSCP.Session();
                 ftpSession.Open(sessionOptions);
                 IsSessionOpen = true;
                 return (true, "Success");
