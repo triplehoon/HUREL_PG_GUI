@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PG", "PG\PG.csproj", "{CC2F
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test console", "Test console\Test console.csproj", "{2D714337-B1E2-48CB-B828-0789522313C9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test console_LogFileLoad", "Test console_LogFileLoad\Test console_LogFileLoad.csproj", "{FB66FD14-029E-4A5B-8831-46D4FD0FE629}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test console_LogFileLoad", "Test console_LogFileLoad\Test console_LogFileLoad.csproj", "{FB66FD14-029E-4A5B-8831-46D4FD0FE629}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
