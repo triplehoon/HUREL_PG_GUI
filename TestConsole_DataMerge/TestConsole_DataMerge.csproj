@@ -1,14 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="CenterSpace.NMath.Standard.Windows.X64" Version="7.4.0.14" />
-    <PackageReference Include="WinSCP" Version="5.21.1" />
-  </ItemGroup>
 
 </Project>
