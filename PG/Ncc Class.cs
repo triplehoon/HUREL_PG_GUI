@@ -23,6 +23,11 @@ namespace HUREL.PG.Ncc
         public int TriggerEndTime { get; private set; }
         public double ADC { get; private set; }
 
+        //static public List<NccSpot> SortByBeamTime(List<NccSpot> spots)
+        //{
+        //    spots.OrderBy(x => x.BeamStartTime);
+        //    return spots;
+        //}
         public void setLogTick(int tick)
         {
             this.LogTick = tick;
@@ -120,6 +125,12 @@ namespace HUREL.PG.Ncc
     public class NccLayer : Layer
     {
         private static double ToleranceDistBetweenPlanAndLogSpot = 3;
+        //private bool isGetRefTime = false;
+        //private long refTimeFirstTuning = 0;
+
+
+
+
         public NccLayer(string recordFileDir, string SpecifFileDir, double coeff_x, double coeff_y, NccPlan plan)
         {
             logSpots = new List<NccLogSpot>();
@@ -321,6 +332,13 @@ namespace HUREL.PG.Ncc
                         yPositions.Clear();
                         epochTime.Clear();
 
+                        //if (isGetRefTime == false && layerNumber == 0 && state == NccSpot.NccBeamState.Tuning)
+                        //{
+                        //    refTimeFirstTuning = tempstartEpochTime.Ticks;
+                        //    isGetRefTime = true;
+                        //}
+
+                        //int logTick = Convert.ToInt32((tempstartEpochTime.Ticks - refTimeFirstTuning) / 10);
                         logSpots.Add(new NccLogSpot(templayerNumber, layerId, ((tempyPosition - data_speicf.icyOffset) * coeff_y), ((tempxPosition - data_speicf.icxOffset) * coeff_x), state, tempstartEpochTime, tempendEpochTime));
                         spotContinue = false;
                     }
@@ -374,7 +392,15 @@ namespace HUREL.PG.Ncc
                     yPositions.Clear();
                     epochTime.Clear();
 
+                    //if (isGetRefTime == false && layerNumber == 0 && state == NccSpot.NccBeamState.Tuning)
+                    //{
+                    //    refTimeFirstTuning = tempstartEpochTime.Ticks;
+                    //    isGetRefTime = true;
+                    //}
+
+                    //int logTick = Convert.ToInt32((tempstartEpochTime.Ticks - refTimeFirstTuning) / 10);
                     logSpots.Add(new NccLogSpot(templayerNumber, layerId, ((tempyPosition - data_speicf.icyOffset) * coeff_y), ((tempxPosition - data_speicf.icxOffset) * coeff_x), state, tempstartEpochTime, tempendEpochTime));
+
                     spotContinue = false;
                 }
             }
@@ -391,10 +417,10 @@ namespace HUREL.PG.Ncc
     {
         public NccSession()
         {
-            
+
         }
 
-        private GapPeakAndRange gapPeakAndRange;
+        private List<GapPeakAndRange> gapPeakAndRange = new List<GapPeakAndRange>();
 
         private List<NccLayer> layers = new List<NccLayer>();
         public List<NccLayer> Layers
@@ -411,6 +437,15 @@ namespace HUREL.PG.Ncc
             get
             {
                 return nCCSpots;
+            }
+        }
+
+        private List<SpotMap> spotMap = new List<SpotMap>();
+        public List<SpotMap> SpotMap
+        {
+            get
+            {
+                return spotMap;
             }
         }
 
@@ -645,7 +680,7 @@ namespace HUREL.PG.Ncc
 
             return true;
         }
-        public bool LoadPGFile(string pgDir)
+        public bool LoadPGFile(string pgDir, bool isBrokenScin)
         {
             #region Check Valid
             if (!File.Exists(pgDir))
@@ -660,7 +695,7 @@ namespace HUREL.PG.Ncc
                 return false;
             }
             #endregion
-            pgData = new NccMultislitPg(pgDir);
+            pgData = new NccMultislitPg(pgDir, isBrokenScin);
 
             IsPGLoad = true;
 
@@ -680,20 +715,66 @@ namespace HUREL.PG.Ncc
             // 4. get beam range map
             //      input: SpotNCC                  // output: BeamRangeMap
 
-            List<PgSpot> pgSpots = splitDataIntoSpot(MultislitPgData.GetPGSpots(), 5, 40, 4);
+            #region Debug (is broken scintillaotr?)
+            //var pg_raw = MultislitPgData.GetPGSpots();
+            //int[] pgDist = new int[144];
+            //for (int ch = 0; ch < 144; ch++)
+            //{
+            //    int tempSum = 0;
+            //    for (int index_line = 0; index_line < pg_raw.Count; index_line++)
+            //    {
+            //        tempSum += pg_raw[index_line].ChannelCount[ch];
+            //    }
+            //    pgDist[ch] = tempSum;
+            //    Console.WriteLine($"{ch}, {tempSum}");
+            //}
+            #endregion
+
+            List<PgSpot> pgSpots = splitDataIntoSpot(MultislitPgData.GetPGSpots(), 5, 40, 30, "SP34"); // SP34 사용한 케이스
+            //List<PgSpot> pgSpots = splitDataIntoSpot(MultislitPgData.GetPGSpots(), 4, 20, 10, "PMMA"); // PMMA 사용한 케이스
             nCCSpots = mergeNCCSpotData(pgSpots, layers);
 
+            int selectedLayer = 0;
+            getSpotMap(nCCSpots, selectedLayer);
 
 
 
 
             return true;
         }
-        
-        
+        public bool LoadPeakAndGapRange(string fileDir)
+        {
+            using (FileStream fs = new FileStream(fileDir, FileMode.Open))
+            {
+                using (StreamReader sr = new StreamReader(fs, Encoding.UTF8, false))
+                {
+                    string lines = null;
+                    string[] tempString = null;
+
+                    while ((lines = sr.ReadLine()) != null)
+                    {
+                        tempString = lines.Split("\t");
+
+                        double energy = Convert.ToDouble(tempString[0]);
+                        double gapValue = Convert.ToDouble(tempString[1]);
+                        gapPeakAndRange.Add(new GapPeakAndRange(energy, gapValue));
+                    }
+                }
+            }
+
+            if (gapPeakAndRange == null || gapPeakAndRange.Count == 0)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+
         #region private functions
 
-        private List<PgSpot> splitDataIntoSpot(List<PgSpot> PG_raw, int width, int ULD, int LLD)
+
+        private List<PgSpot> splitDataIntoSpot(List<PgSpot> PG_raw, int width, int ULD, int LLD, string phantom)
         {
             // Return data
             List<PgSpot> PG_144 = new List<PgSpot>();
@@ -704,54 +785,110 @@ namespace HUREL.PG.Ncc
             int index_SpotStart = 0;
             int index_SpotEnd = 0;
 
-            for (int index = width - 1; index < dataCount; index++)
+            if (phantom == "SP34") // recording interval = 200 us (2021-03-27 measured data)
             {
-                int sum_Count = 0;
-                for (int x = 0; x < width; x++)
+                for (int index = width - 1; index < dataCount; index++)
                 {
-                    sum_Count += PG_raw[index - width + x + 1].SumCounts;
-                }
-
-                if (isSpot == false)
-                {
-                    if (sum_Count > ULD)
+                    int sum_Count = 0;
+                    for (int x = 0; x < width; x++)
                     {
-                        isSpot = true;
-                        index_SpotStart = index;
-                        index += 15;
+                        sum_Count += PG_raw[index - width + x + 1].SumCounts;
+                    }
+
+                    if (isSpot == false)
+                    {
+                        if (sum_Count > ULD)
+                        {
+                            isSpot = true;
+                            index_SpotStart = index;
+                            index += width;
+                        }
+                    }
+                    else
+                    {
+                        if (sum_Count < LLD)
+                        {
+                            isSpot = false;
+                            index_SpotEnd = index;
+                            index += width;
+
+                            // =============== PgSpot definition =============== //
+                            // int[] ChannelCount       & int SumCounts
+                            // int TriggerStartTime = 0 & int TriggerEndTime = 0
+                            // double ADC = 0           & int Tick = 0
+
+                            int[] channelCount = new int[144];
+                            for (int ch = 0; ch < 144; ch++)
+                            {
+                                int chSum = 0;
+                                for (int idx = index_SpotStart; idx < index_SpotEnd; idx++)
+                                {
+                                    chSum += PG_raw[idx].ChannelCount[ch];
+                                }
+                                channelCount[ch] = chSum;
+                            }
+
+                            int sumCounts = channelCount.Sum();
+
+                            int triggerStartTime = PG_raw[index_SpotStart].TriggerStartTime;
+                            int triggerEndTime = PG_raw[index_SpotEnd].TriggerStartTime;
+
+                            PG_144.Add(new PgSpot(channelCount, sumCounts, triggerStartTime, triggerEndTime, 0, 0));
+                        }
                     }
                 }
-                else
+            }
+            else // phantom == "PMMA", recording interval = 100 us
+            {
+                for (int index = width - 1; index < dataCount; index++)
                 {
-                    //if (sum_Count < LLD)
-                    if (PG_raw[index].SumCounts < LLD)
+                    int sum_Count = 0;
+                    for (int x = 0; x < width; x++)
                     {
-                        isSpot = false;
-                        index_SpotEnd = index;
-                        index += 15;
+                        sum_Count += PG_raw[index - width + x + 1].SumCounts;
+                    }
 
-                        // =============== PgSpot definition =============== //
-                        // int[] ChannelCount       & int SumCounts
-                        // int TriggerStartTime = 0 & int TriggerEndTime = 0
-                        // double ADC = 0           & int Tick = 0
-
-                        int[] channelCount = new int[144];
-                        for (int ch = 0; ch < 144; ch++)
+                    if (isSpot == false)
+                    {
+                        if (sum_Count > ULD)
                         {
-                            int chSum = 0;
-                            for (int idx = index_SpotStart; idx < index_SpotEnd; idx++)
-                            {
-                                chSum += PG_raw[idx].ChannelCount[ch];
-                            }
-                            channelCount[ch] = chSum;
+                            isSpot = true;
+                            index_SpotStart = index;
+                            index += 15;
                         }
+                    }
+                    else
+                    {
+                        //if (sum_Count < LLD)
+                        if (PG_raw[index].SumCounts < LLD)
+                        {
+                            isSpot = false;
+                            index_SpotEnd = index;
+                            index += 15;
 
-                        int sumCounts = channelCount.Sum();
+                            // =============== PgSpot definition =============== //
+                            // int[] ChannelCount       & int SumCounts
+                            // int TriggerStartTime = 0 & int TriggerEndTime = 0
+                            // double ADC = 0           & int Tick = 0
 
-                        int triggerStartTime = PG_raw[index_SpotStart].TriggerStartTime;
-                        int triggerEndTime = PG_raw[index_SpotEnd].TriggerStartTime;
+                            int[] channelCount = new int[144];
+                            for (int ch = 0; ch < 144; ch++)
+                            {
+                                int chSum = 0;
+                                for (int idx = index_SpotStart; idx < index_SpotEnd; idx++)
+                                {
+                                    chSum += PG_raw[idx].ChannelCount[ch];
+                                }
+                                channelCount[ch] = chSum;
+                            }
 
-                        PG_144.Add(new PgSpot(channelCount, sumCounts, triggerStartTime, triggerEndTime, 0, 0));
+                            int sumCounts = channelCount.Sum();
+
+                            int triggerStartTime = PG_raw[index_SpotStart].TriggerStartTime;
+                            int triggerEndTime = PG_raw[index_SpotEnd].TriggerStartTime;
+
+                            PG_144.Add(new PgSpot(channelCount, sumCounts, triggerStartTime, triggerEndTime, 0, 0));
+                        }
                     }
                 }
             }
@@ -765,13 +902,13 @@ namespace HUREL.PG.Ncc
                 file.Write($"SpotNum, StartTime, EndTime, Duration, TimeGap, SumCnt");
                 for (int i = 0; i < 144; i++)
                 {
-                    file.Write($", Ch {i+1}");
+                    file.Write($", Ch {i + 1}");
                 }
                 file.WriteLine("");
 
                 for (int i = 0; i < PG_144.Count(); i++)
                 {
-                    file.Write($"{i+1}, ");
+                    file.Write($"{i + 1}, ");
                     file.Write($"{PG_144[i].TriggerStartTime}, ");
                     file.Write($"{PG_144[i].TriggerEndTime}, ");
                     file.Write($"{(PG_144[i].TriggerEndTime - PG_144[i].TriggerStartTime)}, ");
@@ -782,8 +919,8 @@ namespace HUREL.PG.Ncc
                     }
                     else
                     {
-                        file.Write($"{(PG_144[i].TriggerStartTime - PG_144[i-1].TriggerStartTime)}, ");
-                    }                    
+                        file.Write($"{(PG_144[i].TriggerStartTime - PG_144[i - 1].TriggerStartTime)}, ");
+                    }
 
                     file.Write($"{PG_144[i].SumCounts}, ");
                     for (int ch = 0; ch < 143; ch++)
@@ -811,30 +948,41 @@ namespace HUREL.PG.Ncc
 
             #region 1. Set parameter
             int refTimePG = 0;
-            int refTimePlanLog = 0;
+            long refTimePlanLog = 0;
             int numOfCompareSpot = 10;
             #endregion
 
             #region 2. Get reference time (PlanLog)
             List<NccSpot> PlanLog = new List<NccSpot>();
+            List<NccSpot> PlanLogTemp = new List<NccSpot>();
+
             foreach (NccLayer layer in layers)
             {
                 foreach (NccSpot spot in layer.Spots)
                 {
-                    PlanLog.Add(spot);
-                }                
+                    PlanLogTemp.Add(spot);
+                }
             }
 
+            PlanLog = PlanLogTemp.OrderBy(x => x.BeamStartTime).ToList();
+
             bool getRefTimePlanLog = false;
-            int refTimePlanLogTemp = PlanLog[0].TriggerStartTime;
+            //long refTimePlanLogTemp = PlanLog[0].BeamStartTime.Ticks;
+
             for (int i = 0; i < PlanLog.Count - numOfCompareSpot; i++)
-            {                
-                if (PlanLog[i + numOfCompareSpot].TriggerStartTime - PlanLog[i].TriggerStartTime < 0.5E6)
+            {
+                if ((PlanLog[i + numOfCompareSpot].BeamStartTime.Ticks - PlanLog[i].BeamStartTime.Ticks) / 10 < 0.5E6)
                 {
                     getRefTimePlanLog = true;
-                    refTimePlanLog = PlanLog[i].TriggerStartTime;
+                    refTimePlanLog = PlanLog[i].BeamStartTime.Ticks;
                     break;
                 }
+            }
+
+            for (int i = 0; i < PlanLog.Count; i++)
+            {
+                int GapBetweenFirstSpot = Convert.ToInt32((PlanLog[i].BeamStartTime.Ticks - refTimePlanLog) / 10);
+                PlanLog[i].setLogTick(GapBetweenFirstSpot);
             }
 
             if (getRefTimePlanLog == false)
@@ -844,10 +992,6 @@ namespace HUREL.PG.Ncc
                 return nccSpots;
             }
 
-            for (int i = 0; i < PlanLog.Count; i++)
-            {
-                PlanLog[i].setLogTick(PlanLog[i].TriggerStartTime - refTimePlanLog);
-            }
             #endregion
 
             #region 3. Get reference time (PG)
@@ -936,16 +1080,96 @@ namespace HUREL.PG.Ncc
             // Return
             List<SpotMap> spotMap = new List<SpotMap>();
 
-            List<double[]> gaussianWeightMap = new List<double[]>();
-            double[] rangeDifference;
-
             List<NccSpot> spots = (from spot in nCCSpots
                                    where spot.LayerNumber == selectedLayer
                                    where spot.BeamState != NccSpot.NccBeamState.Tuning
                                    select spot).ToList();
-            //double peakToRangeGap = 
+            int spotCounts = spots.Count;
+
+            #region get gaussian weight map (confirmed) - output: [gaussianWeigtMap]
+
+            List<double[]> gaussianWeightMap = new List<double[]>();
+            for (int spotIndex = 0; spotIndex < spotCounts; spotIndex++)
+            {
+                double[] distance = new double[spotCounts];
+
+                for (int compareSpotindex = 0; compareSpotindex < spotCounts; compareSpotindex++)
+                {
+                    double Xdifference = spots[spotIndex].XPosition - spots[compareSpotindex].XPosition;
+                    double Ydifference = spots[spotIndex].YPosition - spots[compareSpotindex].YPosition;
+
+                    distance[compareSpotindex] = Math.Sqrt(Math.Pow(Xdifference, 2) + Math.Pow(Ydifference, 2));
+                }
+
+                double aggregateSigma = 7.8;
+
+                double[] gaussianWeightMapTemp = new double[spotCounts];
+                for (int compareSpotindex = 0; compareSpotindex < spotCounts; compareSpotindex++)
+                {
+                    gaussianWeightMapTemp[compareSpotindex] = Math.Exp(-0.5 * Math.Pow(distance[compareSpotindex] / aggregateSigma, 2));
+                }
+
+                gaussianWeightMap.Add(gaussianWeightMapTemp);
+            }
+
+            #endregion
+
+            #region get gap between peak and range (confirmed) - output: [gap]
+            double layerEnergy = spots.Last().PlanSpot.LayerEnergy;
+
+            int index = gapPeakAndRange.FindIndex(gapList => gapList.energy >= layerEnergy);
+
+            double gapInterpolation = (gapPeakAndRange[index].GapValue - gapPeakAndRange[index - 1].GapValue) / (gapPeakAndRange[index].energy - gapPeakAndRange[index - 1].energy) * (layerEnergy - gapPeakAndRange[index - 1].energy);
+            double gap = gapPeakAndRange[index - 1].GapValue + gapInterpolation;
+            #endregion
+
+            #region get range, range difference () - output: [spotRange], [spotRangeDifference]
+
+            double[] spotRange = new double[spotCounts];
+            double[] spotRangeDifference = new double[spotCounts];
+
+            for (int i = 0; i < spotCounts; i++)
+            {
+                double[] aggregatedPGdistribution = new double[144];
+
+                for (int j = 0; j < 144; j++)
+                {
+                    double chCounts = 0;
+
+                    for (int k = 0; k < spotCounts; k++)
+                    {
+                        if (gaussianWeightMap[i][k] > 0.001)
+                        {
+                            chCounts += gaussianWeightMap[i][k] * spots[k].ChannelCount[j];
+                        }
+                    }
+
+                    aggregatedPGdistribution[j] = chCounts;
+                }
+
+                double isoDepth = 110; // mm unit
+                //spotRange[i] = getRange_ver4p0(aggregatedPGdistribution, spots[i].PlanSpot.Zposition - isoDepth); /// 여기 수정
+                spotRange[i] = getRange_ver4p0(aggregatedPGdistribution, spots[i].PlanSpot.Zposition); /// 여기 수정 
+                spotRangeDifference[i] = spotRange[i] - (spots[i].PlanSpot.Zposition + gap);
+
+                Console.WriteLine($"{spots[i].XPosition}, {spots[i].YPosition}, {spots[i].PlanSpot.Zposition}, {spotRange[i]}, {spotRangeDifference[i]}");
+            }
+
+            #endregion
+
+            #region get spot map () - output: [spotMap]
+
+            spotMap = new List<SpotMap>();
+            for (int spotIndex = 0; spotIndex < spotCounts; spotIndex++)
+            {
+                spotMap.Add(new SpotMap(spots[spotIndex].XPosition, spots[spotIndex].YPosition, spots[spotIndex].PlanSpot.MonitoringUnit, spotRangeDifference[spotIndex]));
+            }
+
+            #endregion
 
 
+
+            int a = 1;
         }
 
         private void getBeamRangeMap(List<NccSpot> nCCSpots)
@@ -957,11 +1181,321 @@ namespace HUREL.PG.Ncc
 
 
 
-        private double getRange_ver4px(int[] pgDistribution, double refRangePos)
+        private double getRange_ver4p0(double[] pgDistribution, double refRangePos)
         {
+            // === Return data === //
+            double range = -1;
+
+            // === Algorithm === //
+            // 0. Parameter setting: (1) xgrid_diff[69]  (2) algorithm: sigma_gaussFilt, cutoffLevel, offset, pitch, minPeakDistance, scope
+            // 1. distribution reconstruction: 144 -> 72 -> 71
+            // 2. apply gaussian kernel to 2nd derivative of distribution
+            // 3. findpeaks
+            // 4. select valid findpeaks value
+            // 5. find peak valley
+            // 6. get range
+
+            #region 0. Parameter setting
+
+            double[] xgrid_diff = new double[69];
+            for (int i = 0; i < 69; i++)
+            {
+                xgrid_diff[i] = -102 + 3 * i;
+            }
+
+            double sigma_gaussFilt = 5;
+            double cutoffLevel = 0.5;
+            double offset = 0;
+            double pitch = 3;
+            double minPeakDistance = 10;
+            double scope = 30;
+
+            #endregion
+
+            #region 1. PG distribution reconstruction: 144 -> 72 -> 71
+
+            // --------------------------------- Left ---------------------------------ll-------------------------------- Right -------------------------------- //
+            //  89  88  87  86  85  84  83  82  81  80  79  78  77  76  75  74  73  72 ll 17  16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0 //
+            // 107 106 105 104 103 102 101 100  99  98  97  96  95  94  93  92  91  90 ll 35  34  33  32  31  30  29  28  27  26  25  24  23  22  21  20  19  18 //
+            // 125 124 123 122 121 120 119 118 117 116 115 114 113 112 111 110 109 108 ll 53  52  51  50  49  48  47  46  45  44  43  42  41  40  39  38  37  36 //
+            // 143 142 141 140 139 138 137 136 135 134 133 132 131 130 129 128 127 126 ll 71  70  69  68  67  66  65  64  63  62  61  60  59  58  57  56  55  54 //
+            // --------------------------------- Left ---------------------------------ll-------------------------------- Right -------------------------------- //
+
+            double[] cnt_row1 = new double[36];
+            double[] cnt_row2 = new double[36];
+            double[] cnt_row3 = new double[36];
+            double[] cnt_row4 = new double[36];
+
+            double[] cnt_top = new double[36];
+            double[] cnt_bot = new double[36];
+
+            double[] cnt_72ch = new double[72];
+            double[] cnt_71ch = new double[71];
+
+            for (int i = 0; i < 18; i++)
+            {
+                cnt_row1[i] = pgDistribution[89 - i];
+                cnt_row2[i] = pgDistribution[107 - i];
+                cnt_row3[i] = pgDistribution[125 - i];
+                cnt_row4[i] = pgDistribution[143 - i];
+
+                cnt_row1[i + 18] = pgDistribution[17 - i];
+                cnt_row2[i + 18] = pgDistribution[35 - i];
+                cnt_row3[i + 18] = pgDistribution[53 - i];
+                cnt_row4[i + 18] = pgDistribution[71 - i];
+            }
+
+            for (int i = 0; i < 36; i++)
+            {
+                cnt_bot[i] = cnt_row3[i] + cnt_row4[i];
+                cnt_top[i] = cnt_row1[i] + cnt_row2[i];
+            }
+
+            for (int i = 0; i < 36; i++)
+            {
+                cnt_72ch[2 * i] = cnt_bot[i];
+                cnt_72ch[2 * i + 1] = cnt_top[i];
+            }
+
+            for (int i = 0; i < 71; i++)
+            {
+                cnt_71ch[i] = (cnt_72ch[i] + cnt_72ch[i + 1]) / 2;
+                //Console.WriteLine($"{cnt_71ch[i]}");
+            }
+
+            #endregion
+
+            #region 2. Apply gaussian kernel to 2nd derivative of 71 ch PG distribution
+
+            double[] cnt_71ch_2ndDer = new double[69];
+            for (int i = 0; i < 69; i++)
+            {
+                cnt_71ch_2ndDer[i] = -(cnt_71ch[i + 2] - cnt_71ch[i]) / (2 * pitch);
+            }
+
+            double[] cnt_71ch_2ndDer_gaussFilt = new double[69];
+            #region 1. Generate Gaussian kernel
+
+            double[] hcol = new double[9];
+            double hcolSum = 0;
+
+            double sigmaValue = sigma_gaussFilt / pitch;
+            //double sigmaValue = sigma_gaussFilt;
+
+            for (int i = 0; i < 9; i++)
+            {
+                hcol[i] = (1 / (Math.Sqrt(2 * Math.PI) * sigmaValue)) * Math.Exp(-(Math.Pow(4 - i, 2) / (2 * (Math.Pow(sigmaValue, 2)))));
+                hcolSum += hcol[i];
+            }
+
+            double normalizationFactor = 1 / hcolSum; // 수정 가능
+
+            for (int i = 0; i < 9; i++)
+            {
+                hcol[i] = hcol[i] * normalizationFactor;
+            }
+
+            #endregion
+            #region 2. Apply Gaussian kernel to cnt_71ch_2ndDer
+
+            List<double> preConv_dist_unfilt = new List<double>();
+            double dist_diff_temp = 0;
+
+            for (int i = 0; i < 4; i++)
+            {
+                preConv_dist_unfilt.Add(cnt_71ch_2ndDer[0]);
+            }
+            for (int i = 0; i < 69; i++)
+            {
+                preConv_dist_unfilt.Add(cnt_71ch_2ndDer[i]);
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                preConv_dist_unfilt.Add(cnt_71ch_2ndDer[68]);
+            }
+
+            for (int i = 0; i < 69; i++)
+            {
+                for (int j = 0; j < 9; j++)
+                {
+                    dist_diff_temp += (preConv_dist_unfilt[i + j] * hcol[j]);
+                }
+                cnt_71ch_2ndDer_gaussFilt[i] = dist_diff_temp;
+                dist_diff_temp = 0;
+            }
+
+            #endregion
+
+            #endregion
+
+            #region 3. findpeaks
+            // modify later to https://www.cnblogs.com/sowhat4999/p/7050697.html
+            DoubleVector secondDer = new DoubleVector(cnt_71ch_2ndDer_gaussFilt);
+            PeakFinderRuleBased peakFind = new PeakFinderRuleBased(secondDer);
+
+            peakFind.LocatePeaks();
+            peakFind.ApplySortOrder(PeakFinderRuleBased.PeakSortOrder.Descending);
+
+            List<Extrema> FoundPeaks = peakFind.GetAllPeaks();
+
+            int index = 0;
+            if (FoundPeaks.Count > 0)
+            {
+                while (true)
+                {
+                    if (index < FoundPeaks.Count())
+                    {
+                        FoundPeaks.RemoveAll(x => Math.Abs(x.X - FoundPeaks[index].X) < minPeakDistance && x.X != FoundPeaks[index].X);
+
+                        #region Debugging
+                        //Trace.WriteLine("");
+                        //Trace.WriteLine("삭제 중"); int j = 1;
+                        //foreach (var kk in FoundPeaks)
+                        //{
+                        //    Trace.WriteLine($"{j}. {kk.X}, {kk.Y}");
+                        //    j++;
+                        //}
+                        #endregion
+
+                        if (index < FoundPeaks.Count())
+                        {
+                            index++;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                Trace.WriteLine("Error: [getRange_ver4px - findpeaks]");
+            }
+
+            var locs = (from Pks in FoundPeaks
+                        select Pks.X).ToArray();
+            var pks = (from Pks in FoundPeaks
+                       select Pks.Y).ToArray();
+
+            #endregion
+
+            #region 4. select valid findpeaks value
+
+            List<int> indexList = new List<int>();
+            List<double> peaksList = new List<double>();
+            List<double> locsList = new List<double>();
+            int validIndex = 0;
+
+            // 2022-08-05 add test ////////////////////////
 
 
-            return 0;
+
+            ////////////////////////////////////////////////
+
+            foreach (var loc in locs)
+            {
+                if (3 * (loc - 34) > refRangePos - scope && 3 * (loc - 34) < refRangePos + scope)
+                {
+                    indexList.Add(validIndex);
+                    peaksList.Add(pks[validIndex]);
+                    locsList.Add(locs[validIndex]);
+                }
+                validIndex++;
+            }
+
+            double val_peak = -10000;
+            int loc_peak = -10000;
+
+            if (peaksList.Count() != 0)
+            {
+                val_peak = peaksList.Max();
+                loc_peak = (int)locsList[peaksList.IndexOf(val_peak)];
+            }
+            else
+            {
+                return -10000; // range
+            }
+
+            #endregion
+
+            #region 5. find peak valley
+
+            double[] cnt_71ch_2ndDer_reverse = new double[69];
+            for (int i = 0; i < 69; i++)
+            {
+                cnt_71ch_2ndDer_reverse[i] = -cnt_71ch_2ndDer[i];
+            }
+
+            DoubleVector secondDer_reverse = new DoubleVector(cnt_71ch_2ndDer_reverse);
+            PeakFinderRuleBased peakFind_reverse = new PeakFinderRuleBased(secondDer_reverse);
+
+            peakFind_reverse.LocatePeaks();
+            double[] distanceFromPeak = new double[peakFind_reverse.NumberPeaks];
+            for (int i = 0; i < peakFind_reverse.NumberPeaks; i++)
+            {
+                distanceFromPeak[i] = loc_peak - peakFind_reverse[i].X;
+            }
+
+            double[] tempLeft = (from distance in distanceFromPeak
+                                 where distance > 0
+                                 select distance).ToArray();
+            double[] tempRight = (from distance in distanceFromPeak
+                                  where distance < 0
+                                  select distance).ToArray();
+
+            int LeftIndex, RightIndex;
+
+            if (tempLeft.Length != 0)
+            {
+                LeftIndex = loc_peak - Convert.ToInt32(tempLeft.Last()); // 수정 2022-01-09 23:06
+            }
+            else
+            {
+                LeftIndex = 0;
+            }
+
+            if (tempRight.Length != 0)
+            {
+                RightIndex = loc_peak - Convert.ToInt32(tempRight[0]); // 수정 2022-01-09 23:06
+            }
+            else
+            {
+                RightIndex = 68;
+            }
+
+            double minValue_left = cnt_71ch_2ndDer_gaussFilt[LeftIndex];
+            double minValue_right = cnt_71ch_2ndDer_gaussFilt[RightIndex];
+
+            double bottomLevel = Math.Max(minValue_left, minValue_right);
+
+            double baseline = bottomLevel + cutoffLevel * (val_peak - bottomLevel);
+
+            #endregion
+
+            #region 6. get range
+
+            double sig_MR = new double();
+            double sig_M = new double();
+
+            for (int i = LeftIndex; i < RightIndex + 1; i++)
+            {
+                if (cnt_71ch_2ndDer_gaussFilt[i] - baseline > 0)
+                {
+                    sig_MR += (cnt_71ch_2ndDer_gaussFilt[i] - baseline) * xgrid_diff[i];
+                    sig_M += cnt_71ch_2ndDer_gaussFilt[i] - baseline;
+                }
+            }
+
+            range = (sig_MR / sig_M) + offset;
+
+            #endregion
+
+            return range;
         }
 
         #endregion
@@ -1052,7 +1586,7 @@ namespace HUREL.PG.Ncc
         public string? PGDir { get; private set; }
 
         private List<PgSpot> spots = new List<PgSpot>();
-        public NccMultislitPg(string pgDir)
+        public NccMultislitPg(string pgDir, bool isBroken)
         {
             if (pgDir != null & pgDir != "")
             {
@@ -1107,6 +1641,16 @@ namespace HUREL.PG.Ncc
 
                                 SumCounts = ChannelCount.ToList().Sum();
 
+                                if (isBroken == true)
+                                {
+                                    ChannelCount[0] = ChannelCount[1];
+                                    ChannelCount[18] = ChannelCount[19];
+                                    ChannelCount[36] = ChannelCount[37];
+
+                                    double temp = (ChannelCount[25] + ChannelCount[27]) / 2;
+                                    ChannelCount[26] = (int)Math.Truncate(temp);
+                                }
+
                                 PgSpot pgSpot = new PgSpot(ChannelCount, SumCounts, TriggerStartTime, TriggerEndTime, ADC);
                                 spots.Add(pgSpot);
                             }
@@ -1142,6 +1686,8 @@ namespace HUREL.PG.Ncc
 
     public record NccLogSpot(int LayerNumber = -1, string LayerID = "", double XPosition = 0, double YPosition = 0,
                              NccSpot.NccBeamState State = NccSpot.NccBeamState.Unknown, DateTime StartTime = new DateTime(), DateTime EndTime = new DateTime());
+    public record NccLogSpotTick(int LayerNumber = -1, string LayerID = "", double XPosition = 0, double YPosition = 0,
+                                NccSpot.NccBeamState State = NccSpot.NccBeamState.Unknown, DateTime StartTime = new DateTime(), DateTime EndTime = new DateTime(), int Tick = 0);
 
     public record NccPlanSpot(int LayerNumber = -1, double LayerEnergy = 0, double LayerMU = 0, int LayerSpotCount = 0,
                               double Xposition = 0, double Yposition = 0, double Zposition = 0, double MonitoringUnit = 0);
@@ -1195,16 +1741,16 @@ namespace HUREL.PG.Ncc
             // 125 124 123 122 121 120 119 118 117 116 115 114 113 112 111 110 109 108 ll 53  52  51  50  49  48  47  46  45  44  43  42  41  40  39  38  37  36 //
             // 143 142 141 140 139 138 137 136 135 134 133 132 131 130 129 128 127 126 ll 71  70  69  68  67  66  65  64  63  62  61  60  59  58  57  56  55  54 //
             // --------------------------------- Left ---------------------------------ll-------------------------------- Right -------------------------------- //
-            
+
             // 1-1. missing scintillator correction
-            
-            
-            
-            
-            
-            
-            
-            
+
+
+
+
+
+
+
+
             int[] cnt_row1 = new int[36];
             int[] cnt_row2 = new int[36];
             int[] cnt_row3 = new int[36];

@@ -8,7 +8,7 @@ NccSession session = new NccSession();
 
 // 0. Set root folder
 string rootFolder = @"\\166.104.155.16\HUREL_Data\99.임시보관자료\정재린_임시\GUI Data\";
-string caseNumber = @"case4\";
+string caseNumber = @"case6\";
 
 string mainFolder = string.Concat(rootFolder, caseNumber);
 List<string> fileList = Directory.GetFiles(mainFolder).ToList();
@@ -48,12 +48,27 @@ foreach (string recordDir in recordLogFilesList)
 string pgFileDir = (from file in fileList
                     where file.Contains("bin")
                     select file).ToList()[0];
-session.LoadPGFile(pgFileDir);
+session.LoadPGFile(pgFileDir, true);
 
+//int[] pgCounts_144ch = new int[144];
+//for (int ch = 0; ch < 144; ch++)
+//{
+//    int tempSum = 0;
+//    for (int idx_line = 0; idx_line < PG_raw.Count; idx_line++)
+//    {
+//        tempSum += PG_raw[idx_line].ChannelCount[ch];
+//    }
+//    pgCounts_144ch[ch] = tempSum;
+//    // Console.WriteLine($"{ch}, {tempSum}");
+//}
 
 // ======================================== //
 // ========== 4. Post-processing ========== //
 // ======================================== //
+string peakAndGapRangeFileName = @"gapPeakAndRange.txt";
+string peakAndGapRangeFileDir = string.Concat(rootFolder, peakAndGapRangeFileName);
+session.LoadPeakAndGapRange(peakAndGapRangeFileDir);
+
 session.PostProcessing_NCC();
 
 
