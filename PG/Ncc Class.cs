@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static HUREL.PG.Ncc.NccSession;
+using CenterSpace.NMath.Core;
 
 namespace HUREL.PG.Ncc
 {
@@ -17,6 +17,17 @@ namespace HUREL.PG.Ncc
         public string LayerId { get; private set; }
         public double XPosition { get; private set; }
         public double YPosition { get; private set; }
+
+        public int LogTick { get; private set; }
+
+        // int[] ChannelCount, int SumCounts, int TriggerStartTime = 0, int TriggerEndTime = 0, double ADC = 0, int Tick = 0);
+
+        public int[] ChannelCount { get; private set; }
+        public int SumCounts { get; private set; }
+        public int TriggerStartTime { get; private set; }
+        public int TriggerEndTime { get; private set; }
+        public double ADC { get; private set; }
+        public bool IsPgDataSet { get; private set; }
 
         private NccPlanSpot planSpot;
         public NccPlanSpot PlanSpot
@@ -49,6 +60,21 @@ namespace HUREL.PG.Ncc
             LayerId = log.LayerID;
             XPosition = log.XPosition;
             YPosition = log.YPosition;
+            ChannelCount = new int[144];
+            SumCounts = 0;
+            TriggerStartTime = 0;
+            TriggerEndTime = 0;
+            ADC = 0;
+            IsPgDataSet = false;
+        }
+
+        public void SetPgData(MultiSlitPg pg)
+        {
+            ChannelCount = pg.ChannelCount;
+            SumCounts = pg.SumCounts;
+            TriggerStartTime = pg.TriggerStartTime;
+            TriggerEndTime = pg.TriggerEndTime;
+            ADC = pg.ADC;
         }
         public enum NccBeamState
         {
@@ -336,25 +362,38 @@ namespace HUREL.PG.Ncc
         }
 
         private NccPlan plan = new NccPlan("");
-
-        
-        private NccMultislitPg? pgData = null;
-        public NccMultislitPg? MultislitPgData
+        private List<MultiSlitPg> multiSlitPgs = new List<MultiSlitPg>();
+        public List<MultiSlitPg> MultiSlitPgs
         {
             get
             {
-                return pgData;
+                return multiSlitPgs;
+            }
+            private set
+            {
+                multiSlitPgs = value;
+
             }
         }
-
-
+        public string PgFileName { get; private set; }
+        
         private DateTime firstLayerFirstSpotLogTime;
 
         public bool IsPlanLoad { get; private set; }
-        public bool IsPGLoad { get; private set; }
+        public bool IsPgLoad { get; private set; }
         public bool IsConfigLogFileLoad { get; private set; }
 
         public bool IsGetReferenceTime { get; private set; }
+
+
+        public NccSession()
+        {
+            PgFileName = "";
+            IsPlanLoad = false;
+            IsPgLoad = false;
+            IsConfigLogFileLoad = false;
+            IsGetReferenceTime = false;            
+        }
 
 
         private NccLogParameter logParameter = new NccLogParameter();
@@ -583,7 +622,7 @@ namespace HUREL.PG.Ncc
             return 0;
 
         }
-        public bool LoadPGFile(string pgDir)
+        public bool LoadPgFile(string pgDir)
         {
             #region Check Valid
             if (!File.Exists(pgDir))
@@ -598,17 +637,24 @@ namespace HUREL.PG.Ncc
                 return false;
             }
             #endregion
-            pgData = new NccMultislitPg(pgDir);
+            multiSlitPgs = MultiSlitPg.LoadbinaryFile(pgDir);
 
-            IsPGLoad = true;
-
-            return true;
+            if (multiSlitPgs.Count != 0)
+            {
+                PgFileName = pgDir;
+                IsPgLoad = true;
+                return true;
+            }
+            else
+            {
+                IsPgLoad = false;
+                return false;
+            }
         }
 
         #region private functions
      
         #endregion
-
         private struct NccLogParameter
         {
             public double coeff_x;
@@ -693,18 +739,26 @@ namespace HUREL.PG.Ncc
         }
     }
 
-    public class NccMultislitPg
-    {
-        public string? PGDir { get; private set; }
+  
+    public record NccLogSpot(int LayerNumber = -1, string LayerID = "", double XPosition = 0, double YPosition = 0,
+                             NccSpot.NccBeamState State = NccSpot.NccBeamState.Unknown, DateTime StartTime = new DateTime(), DateTime EndTime = new DateTime());
 
-        private List<PgSpot> spots = new List<PgSpot>();
-        public NccMultislitPg(string pgDir)
+    public record NccPlanSpot(int LayerNumber = -1, double LayerEnergy = 0, double LayerMU = 0, int LayerSpotCount = 0,
+                              double Xposition = 0, double Yposition = 0, double Zposition = 0, double MonitoringUnit = 0);
+
+    public record MultiSlitPg(int[] ChannelCount, int SumCounts, int TriggerStartTime = 0, int TriggerEndTime = 0, double ADC = 0, int Tick = 0)
+    {        
+        public static List<MultiSlitPg> LoadbinaryFile(string pgDir)
         {
-            if (pgDir != null & pgDir != "")
+            List<MultiSlitPg> spots = new List<MultiSlitPg>();
+            if (pgDir != null && pgDir != "")
             {
-                PGDir = pgDir;
-
-                using BinaryReader br = new BinaryReader(File.Open(pgDir, FileMode.Open));
+                string PGDir = pgDir!;
+                if(!Path.IsPathFullyQualified(PGDir))
+                {
+                    return new List<MultiSlitPg>();
+                }
+                using BinaryReader br = new BinaryReader(File.Open(PGDir, FileMode.Open));
                 {
                     long length = br.BaseStream.Length;
                     byte[] buffer = new byte[1024 * 1024 * 1000];
@@ -753,7 +807,7 @@ namespace HUREL.PG.Ncc
 
                                 SumCounts = ChannelCount.ToList().Sum();
 
-                                PgSpot pgSpot = new PgSpot(ChannelCount, SumCounts, TriggerStartTime, TriggerEndTime, ADC);
+                                MultiSlitPg pgSpot = new MultiSlitPg(ChannelCount, SumCounts, TriggerStartTime, TriggerEndTime, ADC);
                                 spots.Add(pgSpot);
                             }
                             else
@@ -768,31 +822,353 @@ namespace HUREL.PG.Ncc
                     }
                 }
             }
-        }
-
-        public List<PgSpot> GetPGSpots()
-        {
             return spots;
         }
-
-        private struct PGstruct // Tick?
+        public static MultiSlitPg MergePgs(List<MultiSlitPg> list)
         {
-            public int[] ChannelCount;
-            public int TriggerStartTime;
-            public int TriggerEndTime;
-            public double ADC;
+            if (list.Count == 0)
+            {
+                return new MultiSlitPg(new int[0], 0, 0, 0, 0, 0);
+            }
+            int[] channelCount = list[0].ChannelCount;
+            int sumCounts = list[0].SumCounts;
+            int triggerStartTime = list[0].TriggerStartTime;
+            int triggerEndTime = list[list.Count].TriggerEndTime;
+            double adc = list[0].ADC;
+            int tick = list[0].Tick;
+            for(int i = 1; i < list.Count; ++i)
+            {
+                
+                for (int j = 0; j < channelCount.Length; ++j)
+                {
+                    channelCount[j] += list[i].ChannelCount[j];
+                }
+                sumCounts += list[i].SumCounts;
+            }
 
-            public int Tick;
+            return new MultiSlitPg(channelCount, sumCounts, triggerStartTime, triggerEndTime, adc, tick);
+        }
+        public double GetRange(double refRangePos)
+        {
+
+            int[] pgDistribution = ChannelCount;
+            
+            double range = -1;
+
+            // === Algorithm === //
+            // 0. Parameter setting: (1) xgrid_diff[69]  (2) algorithm: sigma_gaussFilt, cutoffLevel, offset, pitch, minPeakDistance, scope
+            // 1. distribution reconstruction: 144 -> 72 -> 71
+            // 2. apply gaussian kernel to 2nd derivative of distribution
+            // 3. findpeaks
+            // 4. select valid findpeaks value
+            // 5. find peak valley
+            // 6. get range
+
+            #region 0. Parameter setting
+
+            double[] xgrid_diff = new double[69];
+            for (int i = 0; i < 69; i++)
+            {
+                xgrid_diff[i] = -102 + 3 * i;
+            }
+
+            double sigma_gaussFilt = 5;
+            double cutoffLevel = 0.5;
+            double offset = 0;
+            double pitch = 3;
+            double minPeakDistance = 10;
+            double scope = 30;
+
+            #endregion
+
+            #region 1. PG distribution reconstruction: 144 -> 72 -> 71
+
+            // --------------------------------- Left ---------------------------------ll-------------------------------- Right -------------------------------- //
+            //  89  88  87  86  85  84  83  82  81  80  79  78  77  76  75  74  73  72 ll 17  16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0 //
+            // 107 106 105 104 103 102 101 100  99  98  97  96  95  94  93  92  91  90 ll 35  34  33  32  31  30  29  28  27  26  25  24  23  22  21  20  19  18 //
+            // 125 124 123 122 121 120 119 118 117 116 115 114 113 112 111 110 109 108 ll 53  52  51  50  49  48  47  46  45  44  43  42  41  40  39  38  37  36 //
+            // 143 142 141 140 139 138 137 136 135 134 133 132 131 130 129 128 127 126 ll 71  70  69  68  67  66  65  64  63  62  61  60  59  58  57  56  55  54 //
+            // --------------------------------- Left ---------------------------------ll-------------------------------- Right -------------------------------- //
+
+            // 1-1. missing scintillator correction
+
+
+
+
+
+
+
+
+            int[] cnt_row1 = new int[36];
+            int[] cnt_row2 = new int[36];
+            int[] cnt_row3 = new int[36];
+            int[] cnt_row4 = new int[36];
+
+            int[] cnt_top = new int[36];
+            int[] cnt_bot = new int[36];
+
+            int[] cnt_72ch = new int[72];
+            double[] cnt_71ch = new double[71];
+
+            for (int i = 0; i < 18; i++)
+            {
+                cnt_row1[i] = pgDistribution[89 - i];
+                cnt_row2[i] = pgDistribution[107 - i];
+                cnt_row3[i] = pgDistribution[125 - i];
+                cnt_row4[i] = pgDistribution[143 - i];
+
+                cnt_row1[i + 18] = pgDistribution[17 - i];
+                cnt_row2[i + 18] = pgDistribution[35 - i];
+                cnt_row3[i + 18] = pgDistribution[53 - i];
+                cnt_row4[i + 18] = pgDistribution[71 - i];
+            }
+
+            for (int i = 0; i < 36; i++)
+            {
+                cnt_bot[i] = cnt_row3[i] + cnt_row4[i];
+                cnt_top[i] = cnt_row1[i] + cnt_row2[i];
+            }
+
+            for (int i = 0; i < 36; i++)
+            {
+                cnt_72ch[2 * i] = cnt_bot[i];
+                cnt_72ch[2 * i + 1] = cnt_top[i];
+            }
+
+            for (int i = 0; i < 71; i++)
+            {
+                cnt_71ch[i] = (cnt_72ch[i] + cnt_72ch[i + 1]) / 2;
+                //Console.WriteLine($"{cnt_71ch[i]}");
+            }
+
+            #endregion
+
+            #region 2. Apply gaussian kernel to 2nd derivative of 71 ch PG distribution
+
+            double[] cnt_71ch_2ndDer = new double[69];
+            for (int i = 0; i < 69; i++)
+            {
+                cnt_71ch_2ndDer[i] = -(cnt_71ch[i + 2] - cnt_71ch[i]) / (2 * pitch);
+            }
+
+            double[] cnt_71ch_2ndDer_gaussFilt = new double[69];
+            #region 1. Generate Gaussian kernel
+
+            double[] hcol = new double[9];
+            double hcolSum = 0;
+
+            double sigmaValue = sigma_gaussFilt / pitch;
+
+            for (int i = 0; i < 9; i++)
+            {
+                hcol[i] = (1 / (Math.Sqrt(2 * Math.PI) * sigmaValue)) * Math.Exp(-(Math.Pow(4 - i, 2) / (2 * (Math.Pow(sigmaValue, 2)))));
+                hcolSum += hcol[i];
+            }
+
+            double normalizationFactor = 1 / hcolSum; // 수정 가능
+
+            for (int i = 0; i < 9; i++)
+            {
+                hcol[i] = hcol[i] * normalizationFactor;
+            }
+
+            #endregion
+            #region 2. Apply Gaussian kernel to cnt_71ch_2ndDer
+
+            List<double> preConv_dist_unfilt = new List<double>();
+            double dist_diff_temp = 0;
+
+            for (int i = 0; i < 4; i++)
+            {
+                preConv_dist_unfilt.Add(cnt_71ch_2ndDer[0]);
+            }
+            for (int i = 0; i < 69; i++)
+            {
+                preConv_dist_unfilt.Add(cnt_71ch_2ndDer[i]);
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                preConv_dist_unfilt.Add(cnt_71ch_2ndDer[68]);
+            }
+
+            for (int i = 0; i < 69; i++)
+            {
+                for (int j = 0; j < 9; j++)
+                {
+                    dist_diff_temp += (preConv_dist_unfilt[i + j] * hcol[j]);
+                }
+                cnt_71ch_2ndDer_gaussFilt[i] = dist_diff_temp;
+                dist_diff_temp = 0;
+            }
+
+            #endregion
+
+            #endregion
+
+            #region 3. findpeaks
+            // modify later to https://www.cnblogs.com/sowhat4999/p/7050697.html
+            DoubleVector secondDer = new DoubleVector(cnt_71ch_2ndDer_gaussFilt);
+            PeakFinderRuleBased peakFind = new PeakFinderRuleBased(secondDer);
+
+            peakFind.LocatePeaks();
+            peakFind.ApplySortOrder(PeakFinderRuleBased.PeakSortOrder.Descending);
+
+            List<Extrema> FoundPeaks = peakFind.GetAllPeaks();
+
+            int index = 0;
+            if (FoundPeaks.Count > 0)
+            {
+                while (true)
+                {
+                    if (index < FoundPeaks.Count())
+                    {
+                        FoundPeaks.RemoveAll(x => Math.Abs(x.X - FoundPeaks[index].X) < minPeakDistance && x.X != FoundPeaks[index].X);
+
+                        #region Debugging
+                        //Trace.WriteLine("");
+                        //Trace.WriteLine("삭제 중"); int j = 1;
+                        //foreach (var kk in FoundPeaks)
+                        //{
+                        //    Trace.WriteLine($"{j}. {kk.X}, {kk.Y}");
+                        //    j++;
+                        //}
+                        #endregion
+
+                        if (index < FoundPeaks.Count())
+                        {
+                            index++;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                Trace.WriteLine("Error: [getRange_ver4px - findpeaks]");
+            }
+
+            var locs = (from Pks in FoundPeaks
+                        select Pks.X).ToArray();
+            var pks = (from Pks in FoundPeaks
+                       select Pks.Y).ToArray();
+
+            #endregion
+
+            #region 4. select valid findpeaks value
+
+            List<int> indexList = new List<int>();
+            List<double> peaksList = new List<double>();
+            List<double> locsList = new List<double>();
+            int validIndex = 0;
+
+            foreach (var loc in locs)
+            {
+                if (3 * (loc - 34) > refRangePos - scope && 3 * (loc - 34) < refRangePos + scope)
+                {
+                    indexList.Add(validIndex);
+                    peaksList.Add(pks[validIndex]);
+                    locsList.Add(locs[validIndex]);
+                }
+                validIndex++;
+            }
+
+            double val_peak = -10000;
+            int loc_peak = -10000;
+
+            if (peaksList.Count() != 0 & validIndex > 0)
+            {
+                val_peak = peaksList.Max();
+                loc_peak = (int)locsList[peaksList.IndexOf(val_peak)];
+            }
+            else
+            {
+                return -10000; // range
+            }
+
+            #endregion
+
+            #region 5. find peak valley
+
+            double[] cnt_71ch_2ndDer_reverse = new double[69];
+            for (int i = 0; i < 69; i++)
+            {
+                cnt_71ch_2ndDer_reverse[i] = -cnt_71ch_2ndDer[i];
+            }
+
+            DoubleVector secondDer_reverse = new DoubleVector(cnt_71ch_2ndDer_reverse);
+            PeakFinderRuleBased peakFind_reverse = new PeakFinderRuleBased(secondDer_reverse);
+
+            peakFind_reverse.LocatePeaks();
+            double[] distanceFromPeak = new double[peakFind_reverse.NumberPeaks];
+            for (int i = 0; i < peakFind_reverse.NumberPeaks; i++)
+            {
+                distanceFromPeak[i] = loc_peak - peakFind_reverse[i].X;
+            }
+
+            double[] tempLeft = (from distance in distanceFromPeak
+                                 where distance > 0
+                                 select distance).ToArray();
+            double[] tempRight = (from distance in distanceFromPeak
+                                  where distance < 0
+                                  select distance).ToArray();
+
+            int LeftIndex, RightIndex;
+
+            if (tempLeft.Length != 0)
+            {
+                LeftIndex = loc_peak - Convert.ToInt32(tempLeft.Last()); // 수정 2022-01-09 23:06
+            }
+            else
+            {
+                LeftIndex = 0;
+            }
+
+            if (tempRight.Length != 0)
+            {
+                RightIndex = loc_peak - Convert.ToInt32(tempRight[0]); // 수정 2022-01-09 23:06
+            }
+            else
+            {
+                RightIndex = 68;
+            }
+
+            double minValue_left = cnt_71ch_2ndDer_gaussFilt[LeftIndex];
+            double minValue_right = cnt_71ch_2ndDer_gaussFilt[RightIndex];
+
+            double bottomLevel = Math.Max(minValue_left, minValue_right);
+
+            double baseline = bottomLevel + cutoffLevel * (val_peak - bottomLevel);
+
+            #endregion
+
+            #region 6. get range
+
+            double sig_MR = new double();
+            double sig_M = new double();
+
+            for (int i = LeftIndex; i < RightIndex + 1; i++)
+            {
+                if (cnt_71ch_2ndDer_gaussFilt[i] - baseline > 0)
+                {
+                    sig_MR += (cnt_71ch_2ndDer_gaussFilt[i] - baseline) * xgrid_diff[i];
+                    sig_M += cnt_71ch_2ndDer_gaussFilt[i] - baseline;
+                }
+            }
+
+            range = (sig_MR / sig_M) + offset;
+
+            #endregion
+
+            return range;
         }
     }
-
-    public record NccLogSpot(int LayerNumber = -1, string LayerID = "", double XPosition = 0, double YPosition = 0,
-                             NccSpot.NccBeamState State = NccSpot.NccBeamState.Unknown, DateTime StartTime = new DateTime(), DateTime EndTime = new DateTime());
-
-    public record NccPlanSpot(int LayerNumber = -1, double LayerEnergy = 0, double LayerMU = 0, int LayerSpotCount = 0,
-                              double Xposition = 0, double Yposition = 0, double Zposition = 0, double MonitoringUnit = 0);
-
-    public record PgSpot(int[] ChannelCount, int SumCounts, int TriggerStartTime = 0, int TriggerEndTime = 0, double ADC = 0, int Tick = 0);
 
 
 

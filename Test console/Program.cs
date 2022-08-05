@@ -12,6 +12,8 @@ string pldFilePath = @"E:\OneDrive - 한양대학교\01.Hurel\01.현재작업\20
 string logDir = @"E:\OneDrive - 한양대학교\01.Hurel\01.현재작업\20220531 PG GUI\검증데이터\data_220312_NCC\data_raw\log";
 string logMainName = "20220312_110258_671";
 
+string binaryFilePath = @"E:\OneDrive - 한양대학교\01.Hurel\01.현재작업\20220531 PG GUI\검증데이터\data_220312_NCC\data_sorted\pg_bin\PMMA_NoShift1_Sph_1Gy.bin";
+
 List<string> logFiles = Directory.GetFiles(logDir).ToList();
 
 List<string> selectedLogFiles = logFiles.FindAll(x =>  x.Contains(logMainName) && x.Contains("record"));
@@ -37,5 +39,10 @@ foreach (var layer in session.Layers)
 {
     Console.WriteLine($"{layer.NccBeamState}, {layer.LayerId}");
 }
+
+
+session.LoadPgFile(binaryFilePath);
+
+Console.WriteLine($"{session.MultiSlitPgs.Count}");
 
 Console.WriteLine("done");
