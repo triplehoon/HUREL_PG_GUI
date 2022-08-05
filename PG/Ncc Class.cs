@@ -19,14 +19,13 @@ namespace HUREL.PG.Ncc
         public double YPosition { get; private set; }
 
         public int LogTick { get; private set; }
-
+        public void SetLogTick(int tick)
+        {
+            this.LogTick = tick;
+        }
         // int[] ChannelCount, int SumCounts, int TriggerStartTime = 0, int TriggerEndTime = 0, double ADC = 0, int Tick = 0);
 
-        public int[] ChannelCount { get; private set; }
-        public int SumCounts { get; private set; }
-        public int TriggerStartTime { get; private set; }
-        public int TriggerEndTime { get; private set; }
-        public double ADC { get; private set; }
+        public MultiSlitPg PgData { get; private set; }
         public bool IsPgDataSet { get; private set; }
 
         private NccPlanSpot planSpot;
@@ -60,21 +59,13 @@ namespace HUREL.PG.Ncc
             LayerId = log.LayerID;
             XPosition = log.XPosition;
             YPosition = log.YPosition;
-            ChannelCount = new int[144];
-            SumCounts = 0;
-            TriggerStartTime = 0;
-            TriggerEndTime = 0;
-            ADC = 0;
-            IsPgDataSet = false;
+            PgData = new MultiSlitPg(new int[0], 0);
+             IsPgDataSet = false;
         }
 
         public void SetPgData(MultiSlitPg pg)
         {
-            ChannelCount = pg.ChannelCount;
-            SumCounts = pg.SumCounts;
-            TriggerStartTime = pg.TriggerStartTime;
-            TriggerEndTime = pg.TriggerEndTime;
-            ADC = pg.ADC;
+            PgData = pg;
         }
         public enum NccBeamState
         {
@@ -362,37 +353,64 @@ namespace HUREL.PG.Ncc
         }
 
         private NccPlan plan = new NccPlan("");
-        private List<MultiSlitPg> multiSlitPgs = new List<MultiSlitPg>();
-        public List<MultiSlitPg> MultiSlitPgs
+        private List<MultiSlitPg> pgRawData = new List<MultiSlitPg>();
+        public List<MultiSlitPg> PgRawData
         {
             get
             {
-                return multiSlitPgs;
+                return pgRawData;
             }
             private set
             {
-                multiSlitPgs = value;
+                pgRawData = value;
+            }
+        }
+        public void SetMultiSlitPg(List<MultiSlitPg> pgRaw)
+        {
+            PgRawData = pgRaw;
+        }
+
+        private List<MultiSlitPg> pgSpots = new List<MultiSlitPg>();
+        public List<MultiSlitPg> PgSpots
+        {
+            get
+            {
+                return pgSpots;
+            }
+            private set
+            {
+                pgSpots = value;
 
             }
         }
+
         public string PgFileName { get; private set; }
-        
+        public string PlanFileName { get { return Path.GetFileName(plan.PlanFilePath); } }
         private DateTime firstLayerFirstSpotLogTime;
 
         public bool IsPlanLoad { get; private set; }
         public bool IsPgLoad { get; private set; }
         public bool IsConfigLogFileLoad { get; private set; }
-
         public bool IsGetReferenceTime { get; private set; }
 
-
+        public bool IsReadyToStartSession
+        {
+            get
+            {
+                return IsPlanLoad;
+            }
+        }
+        public string PatientName { get; private set; }
+        public string PatientId { get; private set; }
         public NccSession()
         {
             PgFileName = "";
             IsPlanLoad = false;
             IsPgLoad = false;
             IsConfigLogFileLoad = false;
-            IsGetReferenceTime = false;            
+            IsGetReferenceTime = false;
+            PatientName = "";
+            PatientId = "";
         }
 
 
@@ -420,7 +438,7 @@ namespace HUREL.PG.Ncc
                 }
 
                 IsPlanLoad = true;
-
+                
                 return true;
             }
             else if (planFileDir == "")
@@ -582,6 +600,38 @@ namespace HUREL.PG.Ncc
 
             return true;
         }
+        public bool LoadPgFile(string pgDir)
+        {
+            #region Check Valid
+            if (!File.Exists(pgDir))
+            {
+                Debug.WriteLine($"PG file doesn't exist");
+                return false;
+            }
+
+            if (!Equals(Path.GetExtension(pgDir), ".bin"))
+            {
+                Debug.WriteLine($"Invalid file extension");
+                return false;
+            }
+            #endregion
+            PgRawData = MultiSlitPg.LoadbinaryFile(pgDir);
+
+            if (PgRawData.Count != 0)
+            {
+                PgFileName = pgDir;
+                PgSpots = MultiSlitPg.SplitDataIntoSpot(PgRawData, 5, 40, 4);
+                IsPgLoad = true;
+                return true;
+            }
+            else
+            {
+                IsPgLoad = false;
+                return false;
+            }
+        }
+
+        #region private functions
         static private int SortLayer(NccLayer layer1, NccLayer layer2)
         {
             if (layer1.PartNumber < layer2.PartNumber)
@@ -622,38 +672,7 @@ namespace HUREL.PG.Ncc
             return 0;
 
         }
-        public bool LoadPgFile(string pgDir)
-        {
-            #region Check Valid
-            if (!File.Exists(pgDir))
-            {
-                Debug.WriteLine($"PG file doesn't exist");
-                return false;
-            }
 
-            if (!Equals(Path.GetExtension(pgDir), ".bin"))
-            {
-                Debug.WriteLine($"Invalid file extension");
-                return false;
-            }
-            #endregion
-            multiSlitPgs = MultiSlitPg.LoadbinaryFile(pgDir);
-
-            if (multiSlitPgs.Count != 0)
-            {
-                PgFileName = pgDir;
-                IsPgLoad = true;
-                return true;
-            }
-            else
-            {
-                IsPgLoad = false;
-                return false;
-            }
-        }
-
-        #region private functions
-     
         #endregion
         private struct NccLogParameter
         {
@@ -665,16 +684,17 @@ namespace HUREL.PG.Ncc
 
     public class NccPlan
     {
-        public string? PlanFile { get; private set; }
+        public string PlanFilePath { get; private set; }
         public double TotalPlanMonitoringUnit { get; }
         public int TotalPlanLayer { get; }
 
         private List<NccPlanSpot> spots = new List<NccPlanSpot>();
         public NccPlan(string planFile)
         {
+            PlanFilePath = "";
             if (planFile != null & planFile != "")
             {
-                PlanFile = planFile;
+                PlanFilePath = planFile!;
 
                 using (FileStream fs = new FileStream(planFile!, FileMode.Open))
                 {
@@ -1167,6 +1187,73 @@ namespace HUREL.PG.Ncc
             #endregion
 
             return range;
+        }
+
+
+
+        public static List<MultiSlitPg> SplitDataIntoSpot(List<MultiSlitPg> PG_raw, int width, int ULD, int LLD)
+        {
+            // Return data
+            List<MultiSlitPg> PG_144 = new List<MultiSlitPg>();
+
+            bool isSpot = false;
+            int dataCount = PG_raw.Count();
+
+            int index_SpotStart = 0;
+            int index_SpotEnd = 0;
+
+            for (int index = width - 1; index < dataCount; index++)
+            {
+                int sum_Count = 0;
+                for (int x = 0; x < width; x++)
+                {
+                    sum_Count += PG_raw[index - width + x + 1].SumCounts;
+                }
+
+                if (isSpot == false)
+                {
+                    if (sum_Count > ULD)
+                    {
+                        isSpot = true;
+                        index_SpotStart = index;
+                        index += 15;
+                    }
+                }
+                else
+                {
+                    //if (sum_Count < LLD)
+                    if (PG_raw[index].SumCounts < LLD)
+                    {
+                        isSpot = false;
+                        index_SpotEnd = index;
+                        index += 15;
+
+                        // =============== PgSpot definition =============== //
+                        // int[] ChannelCount       & int SumCounts
+                        // int TriggerStartTime = 0 & int TriggerEndTime = 0
+                        // double ADC = 0           & int Tick = 0
+
+                        int[] channelCount = new int[144];
+                        for (int ch = 0; ch < 144; ch++)
+                        {
+                            int chSum = 0;
+                            for (int idx = index_SpotStart; idx < index_SpotEnd; idx++)
+                            {
+                                chSum += PG_raw[idx].ChannelCount[ch];
+                            }
+                            channelCount[ch] = chSum;
+                        }
+
+                        int sumCounts = channelCount.Sum();
+
+                        int triggerStartTime = PG_raw[index_SpotStart].TriggerStartTime;
+                        int triggerEndTime = PG_raw[index_SpotEnd].TriggerStartTime;
+
+                        PG_144.Add(new MultiSlitPg(channelCount, sumCounts, triggerStartTime, triggerEndTime, 0, 0));
+                    }
+                }
+            }
+            return PG_144;
         }
     }
 

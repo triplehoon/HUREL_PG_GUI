@@ -4,9 +4,7 @@
     <TargetFramework>net6.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-	<UseWindowsForms>true</UseWindowsForms>
-	<Platforms>AnyCPU;x64</Platforms>
-	<AllowUnsafeBlocks>True</AllowUnsafeBlocks>	
+	<Platforms>AnyCPU;x64</Platforms>	
   </PropertyGroup>
 
   <ItemGroup>

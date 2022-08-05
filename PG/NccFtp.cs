@@ -153,8 +153,6 @@ namespace HUREL.PG.Ncc
         public static void StopSyncAndDownloadLogFile()
         {
             IsFtpStart = false;
-
-           
         }
     }
 }
