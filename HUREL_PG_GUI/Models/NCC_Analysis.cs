@@ -1856,6 +1856,11 @@ namespace HUREL_PG_GUI.Models
                 SpotMap.Add(temp);
             }
 
+            for (int i = 0; i < SpotsCounts; i++)
+            {
+                Console.WriteLine($"{SpotMap[i].X}, {SpotMap[i].Y}, {RangeDifference[i]}");
+            }
+
             return SpotMap;
         }
 

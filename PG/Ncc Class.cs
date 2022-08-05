@@ -449,7 +449,16 @@ namespace HUREL.PG.Ncc
             }
         }
 
-        private NccPlan plan = new NccPlan("");
+        private List<BeamRangeMap> beamRangeMap = new List<BeamRangeMap>();
+        public List<BeamRangeMap> BeamRangeMap
+        {
+            get
+            {
+                return beamRangeMap;
+            }
+        }
+
+        private NccPlan plan = new NccPlan("", true);
 
 
         private NccMultislitPg? pgData = null;
@@ -479,13 +488,13 @@ namespace HUREL.PG.Ncc
         /// </summary>
         /// <param name="planFileDir"></param>
         /// <returns></returns>
-        public bool LoadPlanFile(string planFileDir)
+        public bool LoadPlanFile(string planFileDir, bool flagFlatten)
         {
             if (planFileDir.EndsWith("pld") || planFileDir.EndsWith("txt"))
             {
                 try
                 {
-                    plan = new NccPlan(planFileDir);
+                    plan = new NccPlan(planFileDir, flagFlatten);
                 }
                 catch (Exception ex)
                 {
@@ -734,13 +743,22 @@ namespace HUREL.PG.Ncc
             //List<PgSpot> pgSpots = splitDataIntoSpot(MultislitPgData.GetPGSpots(), 4, 20, 10, "PMMA"); // PMMA 사용한 케이스
             nCCSpots = mergeNCCSpotData(pgSpots, layers);
 
+            //for (int i = 0; i < nCCSpots.Count; i++)
+            //{
+            //    for (int j = 0; j < 144; j++)
+            //    {
+            //        Console.Write($"{nCCSpots[i].ChannelCount[j]}, ");
+            //    }
+            //    Console.WriteLine("");
+            //}
+
             int selectedLayer = 0;
             getSpotMap(nCCSpots, selectedLayer);
 
             int startLayer = 0;
             int endLayer = nCCSpots.Last().LayerNumber;
-            double sigma = 1;
-            double cutoffMU = 0;
+            double sigma = 7;
+            double cutoffMU = 1;
             getBeamRangeMap(nCCSpots, sigma, startLayer, endLayer, cutoffMU);
 
 
@@ -1157,16 +1175,12 @@ namespace HUREL.PG.Ncc
 
                 double isoDepth = 110; // mm unit
 
-                //for (int j = 0; j < 144; j++)
-                //{
-                //    Console.WriteLine($"{aggregatedPGdistribution[j]}");
-                //}
-
-                //spotRange[i] = getRange_ver4p0(aggregatedPGdistribution, spots[i].PlanSpot.Zposition - isoDepth); /// 여기 수정
-                spotRange[i] = getRange_ver4p0(aggregatedPGdistribution, spots[i].PlanSpot.Zposition); /// 여기 수정 
+                bool is144ChCount = false;
+                spotRange[i] = getRange_ver4p0(aggregatedPGdistribution, spots[i].PlanSpot.Zposition, is144ChCount);
                 spotRangeDifference[i] = spotRange[i] - (spots[i].PlanSpot.Zposition + gap);
 
-                Console.WriteLine($"{spots[i].XPosition}, {spots[i].YPosition}, {spots[i].PlanSpot.Zposition}, {spotRange[i]}, {spotRangeDifference[i]}");
+                //Console.WriteLine($"{spots[i].XPosition}, {spots[i].YPosition}, {spots[i].PlanSpot.Zposition}, {spotRange[i]}, {spotRangeDifference[i]}");
+                Console.WriteLine($"{-spots[i].YPosition}, {spots[i].XPosition}, {spots[i].PlanSpot.Zposition}, {spotRangeDifference[i]}");
             }
 
             #endregion
@@ -1176,26 +1190,288 @@ namespace HUREL.PG.Ncc
             spotMap = new List<SpotMap>();
             for (int spotIndex = 0; spotIndex < spotCounts; spotIndex++)
             {
-                spotMap.Add(new SpotMap(spots[spotIndex].XPosition, spots[spotIndex].YPosition, spots[spotIndex].PlanSpot.MonitoringUnit, spotRangeDifference[spotIndex]));
+                spotMap.Add(new SpotMap(-spots[spotIndex].YPosition, spots[spotIndex].XPosition, spots[spotIndex].PlanSpot.MonitoringUnit, spotRangeDifference[spotIndex]));
             }
 
             #endregion
 
-
-
-            int a = 1;
         }
 
         private void getBeamRangeMap(List<NccSpot> nCCSpots, double sigma, int startLayer, int endLayer, double cutoffMU)
         {
+            #region 1. Grid setting - output: [xPos], [yPos], [gridPitch]
+
+            double gridXMin = -60;
+            double gridXMax = 60;
+            double gridYMin = -60;
+            double gridYMax = 60;
+            double gridPitch = 5;
+
+            int numOfXGrid = (int)Math.Ceiling(((gridXMax - gridXMin) / gridPitch) + 1);
+            int numOfYGrid = (int)Math.Ceiling(((gridYMax - gridYMin) / gridPitch) + 1);
+
+            double[] xPos = new double[numOfXGrid];
+            double[] yPos = new double[numOfYGrid];
+
+            for (int i = 0; i < numOfXGrid; i++)
+            {
+                xPos[i] = gridXMin + gridPitch * i;
+            }
+            for (int i = 0; i < numOfYGrid; i++)
+            {
+                yPos[i] = gridYMin + gridPitch * i;
+            }
+
+
+            double[] xgrid_mm = new double[71];
+            for (int i = 0; i < 71; i++)
+            {
+                xgrid_mm[i] = -105 + 3 * i;
+            }
+
+            #endregion
+
+            #region 2. get shifted distribution of each grid
+            
+            double[,] mapDiff = new double[xPos.Length, yPos.Length];
+            double[,] mapMU = new double[xPos.Length, yPos.Length];
+            double[,,] map_PGdist = new double[xPos.Length, yPos.Length, 71];
+
+            
+
+            List<NccSpot> totalSpots = (from spot in nCCSpots
+                                        where spot.BeamState != NccSpot.NccBeamState.Tuning
+                                        select spot).ToList();
+            List<NccSpot> selectedSpots = (from spot in nCCSpots
+                                           where spot.LayerNumber >= startLayer
+                                           where spot.LayerNumber <= endLayer
+                                           where spot.BeamState != NccSpot.NccBeamState.Tuning
+                                           select spot).ToList();
+
+            #region 2-1. get grid flag - output: [flagGrid]
+
+            bool[,] flagGrid = new bool[xPos.Length, yPos.Length];
+            int numOfTotalSpots = totalSpots.Count();
+
+            for (int x = 0; x < xPos.Length; x++)
+            {
+                for (int y = 0; y < yPos.Length; y++)
+                {
+                    for (int i = 0; i < numOfTotalSpots; i++)
+                    {
+                        double spotXpos = totalSpots[i].XPosition;
+                        double spotYpos = totalSpots[i].YPosition;
+
+                        bool flagX = (xPos[x] - (gridPitch / 2) < spotXpos) && (xPos[x] + (gridPitch / 2) > spotXpos);
+                        bool flagY = (yPos[y] - (gridPitch / 2) < spotYpos) && (yPos[y] + (gridPitch / 2) > spotYpos);
+
+                        if (flagX && flagY)
+                        {
+                            flagGrid[x, y] = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            #endregion
+
+            #region 2-2. get range difference and MU of each grid - output: [mapDiff], [mapMU]
+
+            for (int i = 0; i < xPos.Length; i++)
+            {
+                for (int j = 0; j < yPos.Length; j++)
+                {
+                    if (flagGrid[i, j] == true)
+                    {
+                        double[] shiftedPGdistribution = new double[71];
+
+                        for (int k = 0; k < selectedSpots.Count; k++)
+                        {
+                            double spotXpos = selectedSpots[k].XPosition;
+                            double spotYpos = selectedSpots[k].YPosition;
+
+                            double xDifference = xPos[i] - spotXpos;
+                            double yDifference = yPos[j] - spotYpos;
+
+                            double distance = Math.Sqrt(Math.Pow(xDifference, 2) + Math.Pow(yDifference, 2));
+
+                            if (distance <= 3 * sigma)
+                            {
+                                #region 2-2-1. gapPeakandRange - output: [gap]
+
+                                double spotEnergy = selectedSpots[k].PlanSpot.LayerEnergy;
+
+                                int index = gapPeakAndRange.FindIndex(gapList => gapList.energy >= spotEnergy);
+                                double gapInterpolation = (gapPeakAndRange[index].GapValue - gapPeakAndRange[index - 1].GapValue) / (gapPeakAndRange[index].energy - gapPeakAndRange[index - 1].energy) * (spotEnergy - gapPeakAndRange[index - 1].energy);
+                                double gap = gapPeakAndRange[index - 1].GapValue + gapInterpolation;
+
+                                #endregion
+
+                                #region 2-2-2. ch 144 -> ch 71 of selectedSpots[k] - output: [counts71Ch]
+
+                                int[] counts144Ch = new int[144];
+                                counts144Ch = selectedSpots[k].ChannelCount;                                
+
+                                double[] cnt_row1 = new double[36];
+                                double[] cnt_row2 = new double[36];
+                                double[] cnt_row3 = new double[36];
+                                double[] cnt_row4 = new double[36];
+
+                                double[] cnt_top = new double[36];
+                                double[] cnt_bot = new double[36];
+
+                                double[] cnt_72ch = new double[72];
+
+                                for (int ii = 0; ii < 18; ii++)
+                                {
+                                    cnt_row1[ii] = counts144Ch[89 - ii];
+                                    cnt_row2[ii] = counts144Ch[107 - ii];
+                                    cnt_row3[ii] = counts144Ch[125 - ii];
+                                    cnt_row4[ii] = counts144Ch[143 - ii];
+
+                                    cnt_row1[ii + 18] = counts144Ch[17 - ii];
+                                    cnt_row2[ii + 18] = counts144Ch[35 - ii];
+                                    cnt_row3[ii + 18] = counts144Ch[53 - ii];
+                                    cnt_row4[ii + 18] = counts144Ch[71 - ii];
+                                }
+
+                                for (int ii = 0; ii < 36; ii++)
+                                {
+                                    cnt_bot[ii] = cnt_row3[ii] + cnt_row4[ii];
+                                    cnt_top[ii] = cnt_row1[ii] + cnt_row2[ii];
+                                }
+
+                                for (int ii = 0; ii < 36; ii++)
+                                {
+                                    cnt_72ch[2 * ii] = cnt_bot[ii];
+                                    cnt_72ch[2 * ii + 1] = cnt_top[ii];
+                                }
+
+                                double[] counts71Ch = new double[71];
+                                for (int ii = 0; ii < 71; ii++)
+                                {
+                                    counts71Ch[ii] = (cnt_72ch[ii] + cnt_72ch[ii + 1]) / 2;
+                                }
+
+                                #endregion
+
+                                #region 2-2-3. get Shifted distribution according to (plannedZposition + gap) - output: [shiftedPGdistributionTemp]
+
+                                double[] shiftedPGdistributionTemp = new double[71];
+                                double[] xgridTemp = xgrid_mm.Select(x => x - (selectedSpots[k].PlanSpot.Zposition + gap)).ToArray();
+
+                                if (selectedSpots[k].PlanSpot.Zposition + gap >= 0)
+                                {
+                                    int interpIndex = xgridTemp.ToList().FindIndex(a => a >= xgrid_mm[0] && a <= xgrid_mm[1]); // 옮겨진 X 축에서 -105 ~ -102 사이에 오는 index
+                                    double left = xgridTemp[interpIndex] - xgrid_mm[0];  // 내분점 left 길이 (index 기준)
+                                    double right = xgrid_mm[1] - xgridTemp[interpIndex]; // 내분점 right 길이
+
+                                    for (int ii = 0; ii < 71 - interpIndex - 1; ii++)
+                                    {
+                                        shiftedPGdistributionTemp[ii] = (right * counts71Ch[interpIndex + ii] + left * counts71Ch[interpIndex + ii - 1]) / 3; // 내분, [index] 기준에서 [index-1] 기준으로 옮겨옴에 주의
+                                    }
+                                    for (int ii = 71 - interpIndex - 1; ii < 71; ii++)
+                                    {
+                                        shiftedPGdistributionTemp[ii] = shiftedPGdistributionTemp[71 - interpIndex - 1 - 1];
+                                    }
+                                }
+                                else // 빼주는 값이 0보다 작은 경우(빔이 0보다 얕게 들어감, 축이 오른쪽으로 이동하는 경우)
+                                {
+                                    int interpIndex = xgridTemp.ToList().FindIndex(a => a >= xgrid_mm[69] && a <= xgrid_mm[70]);
+                                    double left = xgridTemp[index] - xgrid_mm[69];
+                                    double right = xgrid_mm[70] - xgridTemp[index];
+
+                                    for (int ii = 0; ii < interpIndex + 1; ii++)
+                                    {
+                                        shiftedPGdistributionTemp[70 - interpIndex + ii] = (right * counts71Ch[ii + 1] + left * counts71Ch[ii]) / 3;
+                                    }
+
+                                    if (interpIndex < 69)
+                                    {
+                                        for (int ii = 0; ii < 70 - interpIndex; ii++)
+                                        {
+                                            shiftedPGdistributionTemp[ii] = shiftedPGdistributionTemp[70 - interpIndex];
+                                        }
+                                    }
+                                }
+
+                                #endregion
+
+                                #region 2-2-4. apply distance weight, get shifted PG distribution
+
+                                double weight = Math.Exp(-0.5 * Math.Pow(distance / sigma, 2));
+                                shiftedPGdistributionTemp = shiftedPGdistributionTemp.Select(x => x * weight).ToArray();
+
+                                for (int p = 0; p < 71; p++)
+                                {
+                                    shiftedPGdistribution[p] = shiftedPGdistribution[p] + shiftedPGdistributionTemp[p];
+                                }
+
+                                mapMU[i, j] = mapMU[i, j] + weight * selectedSpots[k].PlanSpot.MonitoringUnit;
+
+                                #endregion
+
+                            }
+                        }
+
+                        bool is144ChCount = true;
+                        mapDiff[i, j] = getRange_ver4p0(shiftedPGdistribution, 0, is144ChCount);
+                    }
+                    else
+                    {
+                        mapDiff[i, j] = -10000;
+                    }
+                }
+            }
+
+
+
+
+
+            #endregion
+
+            #region 2-3. get beam range map - output: [beamRangeMap]
+
+            for (int i = 0; i < xPos.Length; i++)
+            {
+                for (int j = 0; j < yPos.Length; j++)
+                {
+                    if (mapMU[i, j] > cutoffMU)
+                    {
+                        beamRangeMap.Add(new BeamRangeMap(-yPos[j], xPos[i], mapMU[i, j], mapDiff[i, j]));
+                    }
+                    else
+                    {
+                        beamRangeMap.Add(new BeamRangeMap(-yPos[j], xPos[i], 0, mapDiff[i, j]));
+                    }
+                }
+            }
+            beamRangeMap.Add(new BeamRangeMap(-10000, -10000, 20, 0));
+
+            #region Debug
+
+            for (int i = 0; i < beamRangeMap.Count; i++)
+            {
+                Console.WriteLine($"{beamRangeMap[i].X}, {beamRangeMap[i].Y}, {beamRangeMap[i].RangeDifference}, {beamRangeMap[i].MU}");
+            }
+
+            #endregion
+
+            #endregion
+
+            #endregion
+
+            int a = 1;
+
+
+
+
+
 
         }
 
-
-
-
-
-        private double getRange_ver4p0(double[] pgDistribution, double refRangePos)
+        private double getRange_ver4p0(double[] pgDistribution, double refRangePos, bool is144ChCount)
         {
             // === Return data === //
             double range = -1;
@@ -1228,53 +1504,63 @@ namespace HUREL.PG.Ncc
 
             #region 1. PG distribution reconstruction: 144 -> 72 -> 71
 
-            // --------------------------------- Left ---------------------------------ll-------------------------------- Right -------------------------------- //
-            //  89  88  87  86  85  84  83  82  81  80  79  78  77  76  75  74  73  72 ll 17  16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0 //
-            // 107 106 105 104 103 102 101 100  99  98  97  96  95  94  93  92  91  90 ll 35  34  33  32  31  30  29  28  27  26  25  24  23  22  21  20  19  18 //
-            // 125 124 123 122 121 120 119 118 117 116 115 114 113 112 111 110 109 108 ll 53  52  51  50  49  48  47  46  45  44  43  42  41  40  39  38  37  36 //
-            // 143 142 141 140 139 138 137 136 135 134 133 132 131 130 129 128 127 126 ll 71  70  69  68  67  66  65  64  63  62  61  60  59  58  57  56  55  54 //
-            // --------------------------------- Left ---------------------------------ll-------------------------------- Right -------------------------------- //
-
-            double[] cnt_row1 = new double[36];
-            double[] cnt_row2 = new double[36];
-            double[] cnt_row3 = new double[36];
-            double[] cnt_row4 = new double[36];
-
-            double[] cnt_top = new double[36];
-            double[] cnt_bot = new double[36];
-
-            double[] cnt_72ch = new double[72];
             double[] cnt_71ch = new double[71];
 
-            for (int i = 0; i < 18; i++)
+            if (is144ChCount == false)
             {
-                cnt_row1[i] = pgDistribution[89 - i];
-                cnt_row2[i] = pgDistribution[107 - i];
-                cnt_row3[i] = pgDistribution[125 - i];
-                cnt_row4[i] = pgDistribution[143 - i];
+                // --------------------------------- Left ---------------------------------ll-------------------------------- Right -------------------------------- //
+                //  89  88  87  86  85  84  83  82  81  80  79  78  77  76  75  74  73  72 ll 17  16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0 //
+                // 107 106 105 104 103 102 101 100  99  98  97  96  95  94  93  92  91  90 ll 35  34  33  32  31  30  29  28  27  26  25  24  23  22  21  20  19  18 //
+                // 125 124 123 122 121 120 119 118 117 116 115 114 113 112 111 110 109 108 ll 53  52  51  50  49  48  47  46  45  44  43  42  41  40  39  38  37  36 //
+                // 143 142 141 140 139 138 137 136 135 134 133 132 131 130 129 128 127 126 ll 71  70  69  68  67  66  65  64  63  62  61  60  59  58  57  56  55  54 //
+                // --------------------------------- Left ---------------------------------ll-------------------------------- Right -------------------------------- //
 
-                cnt_row1[i + 18] = pgDistribution[17 - i];
-                cnt_row2[i + 18] = pgDistribution[35 - i];
-                cnt_row3[i + 18] = pgDistribution[53 - i];
-                cnt_row4[i + 18] = pgDistribution[71 - i];
+                double[] cnt_row1 = new double[36];
+                double[] cnt_row2 = new double[36];
+                double[] cnt_row3 = new double[36];
+                double[] cnt_row4 = new double[36];
+
+                double[] cnt_top = new double[36];
+                double[] cnt_bot = new double[36];
+
+                double[] cnt_72ch = new double[72];
+                
+
+                for (int i = 0; i < 18; i++)
+                {
+                    cnt_row1[i] = pgDistribution[89 - i];
+                    cnt_row2[i] = pgDistribution[107 - i];
+                    cnt_row3[i] = pgDistribution[125 - i];
+                    cnt_row4[i] = pgDistribution[143 - i];
+
+                    cnt_row1[i + 18] = pgDistribution[17 - i];
+                    cnt_row2[i + 18] = pgDistribution[35 - i];
+                    cnt_row3[i + 18] = pgDistribution[53 - i];
+                    cnt_row4[i + 18] = pgDistribution[71 - i];
+                }
+
+                for (int i = 0; i < 36; i++)
+                {
+                    cnt_bot[i] = cnt_row3[i] + cnt_row4[i];
+                    cnt_top[i] = cnt_row1[i] + cnt_row2[i];
+                }
+
+                for (int i = 0; i < 36; i++)
+                {
+                    cnt_72ch[2 * i] = cnt_bot[i];
+                    cnt_72ch[2 * i + 1] = cnt_top[i];
+                }
+
+                for (int i = 0; i < 71; i++)
+                {
+                    cnt_71ch[i] = (cnt_72ch[i] + cnt_72ch[i + 1]) / 2;
+                }
             }
-
-            for (int i = 0; i < 36; i++)
+            else // is144ChCount == true
             {
-                cnt_bot[i] = cnt_row3[i] + cnt_row4[i];
-                cnt_top[i] = cnt_row1[i] + cnt_row2[i];
+                cnt_71ch = pgDistribution;
             }
-
-            for (int i = 0; i < 36; i++)
-            {
-                cnt_72ch[2 * i] = cnt_bot[i];
-                cnt_72ch[2 * i + 1] = cnt_top[i];
-            }
-
-            for (int i = 0; i < 71; i++)
-            {
-                cnt_71ch[i] = (cnt_72ch[i] + cnt_72ch[i + 1]) / 2;                
-            }
+            
 
             #region Debug (ch counts)
 
@@ -1592,7 +1878,7 @@ namespace HUREL.PG.Ncc
         public int TotalPlanLayer { get; }
 
         private List<NccPlanSpot> spots = new List<NccPlanSpot>();
-        public NccPlan(string planFile)
+        public NccPlan(string planFile, bool flagFlatten)
         {
             if (planFile != null & planFile != "")
             {
@@ -1631,10 +1917,49 @@ namespace HUREL.PG.Ncc
                             {
                                 tempString = lines.Split("\t");
                                 spots.Add(new NccPlanSpot(TempLayerNumber, LayerEnergy, LayerMU, LayerSpotCount, Convert.ToDouble(tempString[0]),
-                                                         Convert.ToDouble(tempString[1]), Convert.ToDouble(tempString[2]), Convert.ToDouble(tempString[3])));
+                                              Convert.ToDouble(tempString[1]), Convert.ToDouble(tempString[2]), Convert.ToDouble(tempString[3])));
                             }
                         }
                     }
+                }
+
+                List<NccPlanSpot> spotsTemp = new List<NccPlanSpot>();
+                if (flagFlatten == true)
+                {
+                    int LayerCount = spots.Last().LayerNumber;
+                    int spotIndex = 0;
+
+                    for (int i = 0; i < LayerCount + 1; i++)
+                    {
+                        var zPosInLayer = (from spot in spots
+                                           where spot.LayerNumber == i
+                                           select spot.Zposition).ToList();
+
+                        var zPosAverage = zPosInLayer.Average();
+                        var spotCounts = zPosInLayer.Count();
+
+                        var ss = (from spot in spots
+                                  where spot.LayerNumber == i
+                                  select spot).ToList();
+
+                        for (int j = 0; j < spotCounts; j++)
+                        {
+                            int layerNumber = spots[spotIndex].LayerNumber;
+                            double layerEnergy = spots[spotIndex].LayerEnergy;
+                            double layerMU = spots[spotIndex].LayerMU;
+                            int layerSpotCount = spots[spotIndex].LayerSpotCount;
+                            double xPosition = spots[spotIndex].Xposition;
+                            double yPosition = spots[spotIndex].Yposition;
+                            double zPosition = zPosAverage; ///
+                            double MonitoringUnit = spots[spotIndex].MonitoringUnit;
+
+                            spotsTemp.Add(new NccPlanSpot(layerNumber, layerEnergy, layerMU, layerSpotCount, xPosition, yPosition, zPosition, MonitoringUnit));
+                            spotIndex++;
+                        }
+
+                    }
+                    spots.Clear();
+                    spots = spotsTemp;
                 }
 
                 TotalPlanMonitoringUnit = 0;

@@ -8,7 +8,7 @@ NccSession session = new NccSession();
 
 // 0. Set root folder
 string rootFolder = @"\\166.104.155.16\HUREL_Data\99.임시보관자료\정재린_임시\GUI Data\";
-string caseNumber = @"case5\";
+string caseNumber = @"case6\";
 
 string mainFolder = string.Concat(rootFolder, caseNumber);
 List<string> fileList = Directory.GetFiles(mainFolder).ToList();
@@ -20,7 +20,8 @@ List<string> fileList = Directory.GetFiles(mainFolder).ToList();
 string planFileDir = (from file in fileList
                       where file.Contains("pld")
                       select file).ToList()[0];
-session.LoadPlanFile(planFileDir);
+bool flagFlatten = true;
+session.LoadPlanFile(planFileDir, flagFlatten);
 
 
 // ======================================= //
