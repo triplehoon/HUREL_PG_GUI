@@ -8,7 +8,7 @@ NccSession session = new NccSession();
 
 // 0. Set root folder
 string rootFolder = @"\\166.104.155.16\HUREL_Data\99.임시보관자료\정재린_임시\GUI Data\";
-string caseNumber = @"case6\";
+string caseNumber = @"case5\";
 
 string mainFolder = string.Concat(rootFolder, caseNumber);
 List<string> fileList = Directory.GetFiles(mainFolder).ToList();

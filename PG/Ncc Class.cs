@@ -737,6 +737,12 @@ namespace HUREL.PG.Ncc
             int selectedLayer = 0;
             getSpotMap(nCCSpots, selectedLayer);
 
+            int startLayer = 0;
+            int endLayer = nCCSpots.Last().LayerNumber;
+            double sigma = 1;
+            double cutoffMU = 0;
+            getBeamRangeMap(nCCSpots, sigma, startLayer, endLayer, cutoffMU);
+
 
 
 
@@ -1130,6 +1136,8 @@ namespace HUREL.PG.Ncc
 
             for (int i = 0; i < spotCounts; i++)
             {
+                //i = 9;
+
                 double[] aggregatedPGdistribution = new double[144];
 
                 for (int j = 0; j < 144; j++)
@@ -1148,6 +1156,12 @@ namespace HUREL.PG.Ncc
                 }
 
                 double isoDepth = 110; // mm unit
+
+                //for (int j = 0; j < 144; j++)
+                //{
+                //    Console.WriteLine($"{aggregatedPGdistribution[j]}");
+                //}
+
                 //spotRange[i] = getRange_ver4p0(aggregatedPGdistribution, spots[i].PlanSpot.Zposition - isoDepth); /// 여기 수정
                 spotRange[i] = getRange_ver4p0(aggregatedPGdistribution, spots[i].PlanSpot.Zposition); /// 여기 수정 
                 spotRangeDifference[i] = spotRange[i] - (spots[i].PlanSpot.Zposition + gap);
@@ -1172,7 +1186,7 @@ namespace HUREL.PG.Ncc
             int a = 1;
         }
 
-        private void getBeamRangeMap(List<NccSpot> nCCSpots)
+        private void getBeamRangeMap(List<NccSpot> nCCSpots, double sigma, int startLayer, int endLayer, double cutoffMU)
         {
 
         }
@@ -1259,9 +1273,69 @@ namespace HUREL.PG.Ncc
 
             for (int i = 0; i < 71; i++)
             {
-                cnt_71ch[i] = (cnt_72ch[i] + cnt_72ch[i + 1]) / 2;
-                //Console.WriteLine($"{cnt_71ch[i]}");
+                cnt_71ch[i] = (cnt_72ch[i] + cnt_72ch[i + 1]) / 2;                
             }
+
+            #region Debug (ch counts)
+
+            //for (int i = 0; i < 36; i++)
+            //{
+            //    Console.WriteLine($"{cnt_row1[i]}"); ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //}
+            //Console.WriteLine("");
+            //Console.WriteLine("");
+            //Console.WriteLine("");
+
+            //for (int i = 0; i < 36; i++)
+            //{
+            //    Console.WriteLine($"{cnt_row2[i]}"); ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //}
+            //Console.WriteLine("");
+            //Console.WriteLine("");
+            //Console.WriteLine("");
+
+            //for (int i = 0; i < 36; i++)
+            //{
+            //    Console.WriteLine($"{cnt_row3[i]}"); ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //}
+            //Console.WriteLine("");
+            //Console.WriteLine("");
+            //Console.WriteLine("");
+
+            //for (int i = 0; i < 36; i++)
+            //{
+            //    Console.WriteLine($"{cnt_row4[i]}"); ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //}
+            //Console.WriteLine("");
+            //Console.WriteLine("");
+            //Console.WriteLine("");
+
+            //for (int i = 0; i < 144; i++)
+            //{
+            //    Console.WriteLine($"{pgDistribution[i]}"); ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //}
+            //Console.WriteLine("");
+            //Console.WriteLine("");
+            //Console.WriteLine("");
+
+            //for (int i = 0; i < 72; i++)
+            //{
+            //    Console.WriteLine($"{cnt_72ch[i]}"); ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //}
+            //Console.WriteLine("");
+            //Console.WriteLine("");
+            //Console.WriteLine("");
+
+            //for (int i = 0; i < 71; i++)
+            //{
+            //    Console.WriteLine($"{cnt_71ch[i]}"); ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //}
+
+            //Console.WriteLine("");
+            //Console.WriteLine("");
+            //Console.WriteLine("");
+
+            #endregion
 
             #endregion
 
@@ -1323,6 +1397,15 @@ namespace HUREL.PG.Ncc
                 cnt_71ch_2ndDer_gaussFilt[i] = dist_diff_temp;
                 dist_diff_temp = 0;
             }
+
+            //Console.WriteLine(""); ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //Console.WriteLine("");
+            //Console.WriteLine("");
+            //for (int i = 0; i < 69; i++)
+            //{
+            //    Console.WriteLine($"{cnt_71ch_2ndDer_gaussFilt[i]}");
+            //}
+            
 
             #endregion
 
@@ -1390,12 +1473,6 @@ namespace HUREL.PG.Ncc
             List<double> peaksList = new List<double>();
             List<double> locsList = new List<double>();
             int validIndex = 0;
-
-            // 2022-08-05 add test ////////////////////////
-
-
-
-            ////////////////////////////////////////////////
 
             foreach (var loc in locs)
             {
@@ -1647,8 +1724,24 @@ namespace HUREL.PG.Ncc
                                     ChannelCount[18] = ChannelCount[19];
                                     ChannelCount[36] = ChannelCount[37];
 
-                                    double temp = (ChannelCount[25] + ChannelCount[27]) / 2;
-                                    ChannelCount[26] = (int)Math.Truncate(temp);
+                                    // 27 
+
+                                    ChannelCount[26] = ChannelCount[25];
+                                    ChannelCount[27] = ChannelCount[28];
+
+                                    ChannelCount[45] = ChannelCount[44];
+
+                                    ChannelCount[63] = ChannelCount[62];
+
+                                    ChannelCount[41] = ChannelCount[40];
+
+                                    //double temp1 = (ChannelCount[25] + ChannelCount[27]) / 2;
+                                    //ChannelCount[26] = (int)Math.Truncate(temp1);
+
+                                    //double temp2 = (ChannelCount[30] + ChannelCount[28]) / 2;
+                                    //ChannelCount[29] = (int)Math.Truncate(temp2);
+
+                                    //ChannelCount[29] = ChannelCount[]
                                 }
 
                                 PgSpot pgSpot = new PgSpot(ChannelCount, SumCounts, TriggerStartTime, TriggerEndTime, ADC);
