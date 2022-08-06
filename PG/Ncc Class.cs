@@ -274,7 +274,7 @@ namespace HUREL.PG.Ncc
         public bool IsLayerValid { get; private set; }
         public int PartNumber { get; private set; }
         #endregion
-        public List<SpotMap> getSpotMap()
+        public List<SpotMap> GetSpotMap()
         {
             // Return
             List<SpotMap> spotMap = new List<SpotMap>();
@@ -327,6 +327,10 @@ namespace HUREL.PG.Ncc
             for (int i = 0; i < spotCounts; i++)
             {
                 //i = 9;
+                if (spots[i].PgData.ChannelCount.Count() == 0)
+                {
+                    continue;
+                }
 
                 double[] aggregatedPGdistribution = new double[144];
 
@@ -338,6 +342,10 @@ namespace HUREL.PG.Ncc
                     {
                         if (gaussianWeightMap[i][k] > 0.001)
                         {
+                            if (spots[k].PgData.ChannelCount.Count() == 0)
+                            {
+                                continue;
+                            }
                             chCounts += gaussianWeightMap[i][k] * spots[k].PgData.ChannelCount[j];
                         }
                     }
@@ -368,6 +376,118 @@ namespace HUREL.PG.Ncc
             #endregion
             return spotMap;
         }
+        public static List<SpotMap> GetSpotMap(List<NccLayer> layer)
+        {
+            // Return
+            List<SpotMap> spotMap = new List<SpotMap>();
+
+            List<NccSpot> spots = new List<NccSpot>();
+            double layerEnergy = 0;
+            foreach(NccLayer layerItem in layer)
+            {
+                spots.AddRange(layerItem.spots);
+                layerEnergy += layerItem.LayerEnergy;
+            }
+
+            layerEnergy /= layer.Count;
+
+            int spotCounts = spots.Count;
+
+            #region get gaussian weight map (confirmed) - output: [gaussianWeigtMap]
+
+            List<double[]> gaussianWeightMap = new List<double[]>();
+            for (int spotIndex = 0; spotIndex < spotCounts; spotIndex++)
+            {
+                double[] distance = new double[spotCounts];
+
+                for (int compareSpotindex = 0; compareSpotindex < spotCounts; compareSpotindex++)
+                {
+                    double Xdifference = spots[spotIndex].XPosition - spots[compareSpotindex].XPosition;
+                    double Ydifference = spots[spotIndex].YPosition - spots[compareSpotindex].YPosition;
+
+                    distance[compareSpotindex] = Math.Sqrt(Math.Pow(Xdifference, 2) + Math.Pow(Ydifference, 2));
+                }
+
+                double aggregateSigma = 7.8;
+
+                double[] gaussianWeightMapTemp = new double[spotCounts];
+                for (int compareSpotindex = 0; compareSpotindex < spotCounts; compareSpotindex++)
+                {
+                    gaussianWeightMapTemp[compareSpotindex] = Math.Exp(-0.5 * Math.Pow(distance[compareSpotindex] / aggregateSigma, 2));
+                }
+
+                gaussianWeightMap.Add(gaussianWeightMapTemp);
+            }
+
+            #endregion
+
+            #region get gap between peak and range (confirmed) - output: [gap]
+
+            int index = gapPeakAndRange.FindIndex(gapList => gapList.energy >= layerEnergy);
+
+            double gapInterpolation = (gapPeakAndRange[index].GapValue - gapPeakAndRange[index - 1].GapValue) / (gapPeakAndRange[index].energy - gapPeakAndRange[index - 1].energy) * (layerEnergy - gapPeakAndRange[index - 1].energy);
+            double gap = gapPeakAndRange[index - 1].GapValue + gapInterpolation;
+            #endregion
+
+            #region get range, range difference () - output: [spotRange], [spotRangeDifference]
+
+            double[] spotRange = new double[spotCounts];
+            double[] spotRangeDifference = new double[spotCounts];
+
+            for (int i = 0; i < spotCounts; i++)
+            {
+                //i = 9;
+                if (spots[i].PgData.ChannelCount.Count() == 0)
+                {
+                    continue;
+                }
+
+                double[] aggregatedPGdistribution = new double[144];
+
+                for (int j = 0; j < 144; j++)
+                {
+                    double chCounts = 0;
+
+                    for (int k = 0; k < spotCounts; k++)
+                    {
+                        if (gaussianWeightMap[i][k] > 0.001)
+                        {
+                            if (spots[k].PgData.ChannelCount.Count() == 0)
+                            {
+                                continue;
+                            }
+                            chCounts += gaussianWeightMap[i][k] * spots[k].PgData.ChannelCount[j];
+                        }
+                    }
+
+                    aggregatedPGdistribution[j] = chCounts;
+                }
+
+                double isoDepth = 110; // mm unit
+
+                bool is144ChCount = false;
+                spotRange[i] = MultiSlitPg.GetRange(aggregatedPGdistribution, spots[i].PlanSpot.Zposition);
+                spotRangeDifference[i] = spotRange[i] - (spots[i].PlanSpot.Zposition + gap);
+
+                //Console.WriteLine($"{spots[i].XPosition}, {spots[i].YPosition}, {spots[i].PlanSpot.Zposition}, {spotRange[i]}, {spotRangeDifference[i]}");
+                //Console.WriteLine($"{-spots[i].YPosition}, {spots[i].XPosition}, {spots[i].PlanSpot.Zposition}, {spotRangeDifference[i]}");
+            }
+
+            #endregion
+
+            #region get spot map () - output: [spotMap]
+
+            spotMap = new List<SpotMap>();
+            for (int spotIndex = 0; spotIndex < spotCounts; spotIndex++)
+            {
+                spotMap.Add(new SpotMap(spots[spotIndex].XPosition, spots[spotIndex].YPosition, spots[spotIndex].PlanSpot.MonitoringUnit, spotRangeDifference[spotIndex]));
+            }
+
+            #endregion
+            return spotMap;
+        }
+
+
         /// <summary>
         /// 
         /// </summary>
@@ -608,6 +728,7 @@ namespace HUREL.PG.Ncc
         public void SetMultiSlitPg(List<MultiSlitPg> pgRaw)
         {
             PgRawData = pgRaw;
+            PgSpots = MultiSlitPg.SplitDataIntoSpot(PgRawData, 5, 40, 5);
             MergeNCCSpotData();
         }
 
@@ -631,6 +752,10 @@ namespace HUREL.PG.Ncc
 
         public bool IsPlanLoad { get; private set; }
         public bool IsPgLoad { get; private set; }
+        public int GetTotalPlanLayerCount
+        {
+            get { return plan.TotalPlanLayer; }
+        }
         public bool IsConfigLogFileLoad { get; private set; }
         public bool IsGetReferenceTime { get; private set; }
 

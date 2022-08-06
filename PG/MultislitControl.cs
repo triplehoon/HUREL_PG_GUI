@@ -21,7 +21,7 @@ namespace HUREL.PG.MultiSlit
             CurrentSession = new NccSession();
         }
 
-        static void InitiateNcc()
+        public static void InitiateNcc()
         {
             Ncc.LogFileSync.OpenFtpSession();
         }
@@ -29,13 +29,10 @@ namespace HUREL.PG.MultiSlit
         static public async Task StopMonitoringRunFtpAndFpgaLoop()
         {
             string status = "";
-
-            //bool isFPGAstart = await Task.Run(() => FPGAControl.Command_MonitoringStart(out status)).ConfigureAwait(false);
-            //await Task.Run(() => FPGAControl.start_stop_usb());
-            bool isFPGAstart = await Task.Run(() => FPGAControl.Command_MonitoringStart(out status, "")).ConfigureAwait(false);
-            //bool isPGdisUpdate = await Task.Run(() => PGdistUpdate());
-            LogFileSync.StopSyncAndDownloadLogFile();
             IsMonitoring = false;
+
+            bool isFPGAstart = await Task.Run(() => FPGAControl.Command_MonitoringStart(out status, "")).ConfigureAwait(false);
+            LogFileSync.StopSyncAndDownloadLogFile();
         }
         static public async Task MonitoringRunFtpAndFpgaLoop(bool isTest = false)
         {
@@ -72,7 +69,7 @@ namespace HUREL.PG.MultiSlit
                 logFileFodler.Create();
             }
 
-            Task syncTask = LogFileSync.SyncAndDownloadLogFile(logFileFodler.FullName, isTest);
+            Task syncTask = LogFileSync.SyncAndDownloadLogFile(dataFolderName.FullName, isTest);
 
             string status = "";
             if (!isTest)

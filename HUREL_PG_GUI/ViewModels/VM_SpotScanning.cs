@@ -1,7 +1,6 @@
 ﻿using AsyncAwaitBestPractices.MVVM;
 using GalaSoft.MvvmLight.CommandWpf;
 using HUREL_PG_GUI.Models;
-using MSPGC_GUI.Model;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -27,8 +26,8 @@ namespace HUREL_PG_GUI.ViewModels
 
         // Visualized Objects
         public ObservableCollection<BeamRangeMapStruct> VM_BeamRangeMap { get; set; }
-        public ObservableCollection<SpotMapDraing> VM_SpotMap { get; set; }
-        public record SpotMapDraing(double X, double Y, double MU, SolidColorBrush Color);
+        public ObservableCollection<SpotMapDrawing> VM_SpotMap { get; set; }
+        public record SpotMapDrawing(double X, double Y, double MU, SolidColorBrush Color);
 
 
         //static public CRUXELLMSPGC FPGAControl;
@@ -282,25 +281,15 @@ namespace HUREL_PG_GUI.ViewModels
         }
         private async Task MonitoringStart()
         {
-            if (isMonitoring == false)
+
+            if (!MultislitControl.IsMonitoring)
             {
-                if (!is_FTPstart)
-                {
-                    return;
-                }
-                isMonitoring = true;
+                IsMonitoring = true;
                 await MultislitControl.MonitoringRunFtpAndFpgaLoop();
             }
             else
             {
-                string status = "";
                 await MultislitControl.StopMonitoringRunFtpAndFpgaLoop();
-                //bool isFPGAstart = await Task.Run(() => FPGAControl.Command_MonitoringStart(out status)).ConfigureAwait(false);
-                //await Task.Run(() => FPGAControl.start_stop_usb());
-                bool isFPGAstart = await Task.Run(() => VM_MainWindow.FPGAControl.Command_MonitoringStart(out status, "")).ConfigureAwait(false);
-                //bool isPGdisUpdate = await Task.Run(() => PGdistUpdate());
-
-                VMStatus = "Idle";
                 IsMonitoring = false;
             }
         }
@@ -310,9 +299,170 @@ namespace HUREL_PG_GUI.ViewModels
         {
             while(isMonitoring)
             {
-                VM_SpotMap 
+                if(MultislitControl.CurrentSession.Layers.Count == 0)
+                {
+                    continue;
+                }
+                CurrentLayer = MultislitControl.CurrentSession.Layers[MultislitControl.CurrentSession.Layers.Count() - 1].LayerNumber;
+                VM_SpotMap = new ObservableCollection<SpotMapDrawing>();
+                List<NccLayer> layers = MultislitControl.CurrentSession.Layers.FindAll(x => x.NccBeamState != NccSpot.NccBeamState.Tuning && x.LayerNumber == CurrentLayer);
+                List<SpotMap> spotMaps = new List<SpotMap>();
+                await Task.Run(() => { spotMaps = NccLayer.GetSpotMap(layers); });
+                for (int i = 0; i < spotMaps.Count; i++)
+                {
+                    VM_SpotMap.Add(new SpotMapDrawing(spotMaps[i].X, spotMaps[i].Y, spotMaps[i].MU, SetColor(spotMaps[i].RangeDifference, -10, 10)));
+                }
+                OnPropertyChanged(nameof(VM_SpotMap));
+                Thread.Sleep(1000);
             }
             
+        }
+        private SolidColorBrush SetColor(double Diff, float min, float max) // 파일로 받아서 작성하도록 수정 필요
+        {
+            float alpha = 1f;
+            float R, G, B;
+
+            float interval = max - min;
+
+            if (Diff == -10000)
+            {
+                R = 1f;
+                G = 1f;
+                B = 1;
+            }
+            else
+            {
+                if (Diff <= min)
+                {
+                    R = 0f;
+                    G = 0f;
+                    B = 0.0514f;
+                }
+                else if (Diff < min + (1 * interval / 20))
+                {
+                    R = 0f;
+                    G = 0.051f;
+                    B = 0.667f;
+                } //
+                else if (Diff < min + (2 * interval / 20))
+                {
+                    R = 0.004f;
+                    G = 0.098f;
+                    B = 0.804f;
+                } //
+                else if (Diff < min + (3 * interval / 20))
+                {
+                    R = 0.004f;
+                    G = 0.145f;
+                    B = 0.941f;
+                } //
+                else if (Diff < min + (4 * interval / 20))
+                {
+                    R = 0.063f;
+                    G = 0.259f;
+                    B = 0.984f;
+                } //
+                else if (Diff < min + (5 * interval / 20))
+                {
+                    R = 0.141f;
+                    G = 0.396f;
+                    B = 0.965f;
+                } //
+                else if (Diff < min + (6 * interval / 20))
+                {
+                    R = 0.216f;
+                    G = 0.522f;
+                    B = 0.949f;
+                } //
+                else if (Diff < min + (7 * interval / 20))
+                {
+                    R = 0.400f;
+                    G = 0.627f;
+                    B = 0.945f;
+                } //
+                else if (Diff < min + (8 * interval / 20))
+                {
+                    R = 0.584f;
+                    G = 0.733f;
+                    B = 0.945f;
+                } //
+                else if (Diff < min + (9 * interval / 20))
+                {
+                    R = 0.757f;
+                    G = 0.835f;
+                    B = 0.941f;
+                } //
+                else if (Diff < min + (10 * interval / 20))
+                {
+                    R = 0.941f;
+                    G = 0.941f;
+                    B = 0.941f;
+                }  //
+                else if (Diff < min + (11 * interval / 20))
+                {
+                    R = 0.933f;
+                    G = 0.855f;
+                    B = 0.757f;
+                }  //
+                else if (Diff < min + (12 * interval / 20))
+                {
+                    R = 0.925f;
+                    G = 0.765f;
+                    B = 0.576f;
+                }  //
+                else if (Diff < min + (13 * interval / 20))
+                {
+                    R = 0.918f;
+                    G = 0.682f;
+                    B = 0.408f;
+                }  //
+                else if (Diff < min + (14 * interval / 20))
+                {
+                    R = 0.910f;
+                    G = 0.596f;
+                    B = 0.224f;
+                }  //
+                else if (Diff < min + (15 * interval / 20))
+                {
+                    R = 0.890f;
+                    G = 0.482f;
+                    B = 0.141f;
+                }  //
+                else if (Diff < min + (16 * interval / 20))
+                {
+                    R = 0.871f;
+                    G = 0.369f;
+                    B = 0.059f;
+                }  //
+                else if (Diff < min + (17 * interval / 20))
+                {
+                    R = 0.820f;
+                    G = 0.267f;
+                    B = 0.008f;
+                }  //
+                else if (Diff < min + (18 * interval / 20))
+                {
+                    R = 0.718f;
+                    G = 0.180f;
+                    B = 0.004f;
+                }  //
+                else if (Diff < min + (19 * interval / 20))
+                {
+                    R = 0.608f;
+                    G = 0.090f;
+                    B = 0.004f;
+                }  //
+                else
+                {
+                    R = 0.510f;
+                    G = 0.008f;
+                    B = 0f;
+                }
+            }
+
+            var color = new SolidColorBrush(Color.FromScRgb(alpha, R, G, B));
+            //var color = Color.FromScRgb(alpha, R, G, B);
+            return color;
         }
 
         private RelayCommand _LoadDICOMCommand;
@@ -345,8 +495,8 @@ namespace HUREL_PG_GUI.ViewModels
                 PatientName = "Test";
                 VMStatus = "Plan File loaded";
                 planFileName = Path.GetFileNameWithoutExtension(dialog.FileName);
-                Plan_TotalLayer = MultislitControl.CurrentSession.Layers[MultislitControl.CurrentSession.Layers.Count].LayerNumber;
-                CurrentLayer = 1;
+                Plan_TotalLayer = MultislitControl.CurrentSession.GetTotalPlanLayerCount;
+                CurrentLayer = 0;
                 Is_PlanFileLoaded = true;
             }
             else

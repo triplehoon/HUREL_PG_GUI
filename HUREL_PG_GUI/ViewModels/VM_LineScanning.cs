@@ -437,26 +437,6 @@ namespace HUREL_PG_GUI.ViewModels
         {
             List<RangeInPMMAStruct> RangeInPMMA = new List<RangeInPMMAStruct>();
 
-            using (FileStream fs = new FileStream(path, FileMode.Open))
-            {
-                using (StreamReader sr = new StreamReader(fs, Encoding.UTF8, false))
-                {
-                    string lines = null;
-                    string[] tempString = null;
-
-                    while ((lines = sr.ReadLine()) != null)
-                    {
-                        RangeInPMMAStruct temp = new RangeInPMMAStruct();
-
-                        tempString = lines.Split("\t");
-
-                        temp.Energy = Convert.ToDouble(tempString[0]);
-                        temp.Range = Convert.ToDouble(tempString[1]);
-
-                        RangeInPMMA.Add(temp);
-                    }
-                }
-            }
             return RangeInPMMA;
         }
 

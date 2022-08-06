@@ -1,6 +1,5 @@
 ﻿using GalaSoft.MvvmLight.Command;
 using HUREL_PG_GUI.Models;
-using MSPGC_GUI.Model;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -23,11 +22,9 @@ namespace HUREL_PG_GUI.ViewModels
         static public HUREL_PG_GUI.Views.Window_PositioningSystem PositioningSystem_View;
 
         //static public CRUXELLMSPGC FPGAControl;
-        static public CRUXELL_Original FPGAControl;
 
         public VM_MainWindow()
         {
-            FPGAControl = new CRUXELL_Original();
         }
 
         #region Binding

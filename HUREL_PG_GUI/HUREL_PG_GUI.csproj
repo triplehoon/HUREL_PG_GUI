@@ -82,10 +82,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="CyUSB">
-      <HintPath>CyUSB.dll</HintPath>
-      <CopyLocal>True</CopyLocal>
-    </Reference>
     <Reference Include="MATSMC">
       <HintPath>bin\Debug\net5.0-windows\MATSMC.dll</HintPath>
       <CopyLocal>True</CopyLocal>
