@@ -46,7 +46,7 @@ foreach (var layer in session.Layers)
 session.LoadPgFile(binaryFilePath);
 
 Console.WriteLine($"{session.PgSpots.Count}");
-
+var spotMap = session.Layers[5].getSpotMap();
 
 Console.WriteLine("done");
 //List<NccSpot> mergeNCCSpotData(List<MultiSlitPg> pgSpots, List<NccLayer> layers)

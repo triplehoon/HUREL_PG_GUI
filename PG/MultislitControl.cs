@@ -78,7 +78,7 @@ namespace HUREL.PG.MultiSlit
             await syncTask;
             await readLogFileLoop;
             await readPGDataLoop;
-            await mergeAndDrawDataLoop;
+            //await mergeAndDrawDataLoop;
         }
         static private Mutex loopMutex = new Mutex(false, "loop mutex");
         static private async Task ReadLogFilesLoop(string folderName)
