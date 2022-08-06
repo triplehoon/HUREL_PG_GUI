@@ -388,6 +388,10 @@ namespace HUREL.PG.Ncc
                 spots.AddRange(layerItem.spots);
                 layerEnergy += layerItem.LayerEnergy;
             }
+            if (spots.Count == 0)
+            {
+                return spotMap; 
+            }
 
             layerEnergy /= layer.Count;
 

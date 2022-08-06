@@ -281,16 +281,19 @@ namespace HUREL_PG_GUI.ViewModels
         }
         private async Task MonitoringStart()
         {
-
             if (!MultislitControl.IsMonitoring)
             {
                 IsMonitoring = true;
+                Task drawing = DrawSpotMap();
+                MultislitControl.InitiateNcc();
                 await MultislitControl.MonitoringRunFtpAndFpgaLoop();
+                await drawing;
             }
             else
             {
                 await MultislitControl.StopMonitoringRunFtpAndFpgaLoop();
                 IsMonitoring = false;
+                
             }
         }
 
@@ -299,6 +302,7 @@ namespace HUREL_PG_GUI.ViewModels
         {
             while(isMonitoring)
             {
+                await Task.Delay(100);
                 if(MultislitControl.CurrentSession.Layers.Count == 0)
                 {
                     continue;
@@ -313,7 +317,7 @@ namespace HUREL_PG_GUI.ViewModels
                     VM_SpotMap.Add(new SpotMapDrawing(spotMaps[i].X, spotMaps[i].Y, spotMaps[i].MU, SetColor(spotMaps[i].RangeDifference, -10, 10)));
                 }
                 OnPropertyChanged(nameof(VM_SpotMap));
-                Thread.Sleep(1000);
+
             }
             
         }

@@ -69,12 +69,12 @@ namespace HUREL.PG.MultiSlit
                 logFileFodler.Create();
             }
 
-            Task syncTask = LogFileSync.SyncAndDownloadLogFile(dataFolderName.FullName, isTest);
+            Task syncTask = LogFileSync.SyncAndDownloadLogFile(logFileFodler.FullName, isTest);
 
             string status = "";
             if (!isTest)
             {
-                bool isFPGAstart = await Task.Run(() => FPGAControl.Command_MonitoringStart(out status, logFileFodler.FullName + "\\data.bin")).ConfigureAwait(false);
+                bool isFPGAstart = await Task.Run(() => FPGAControl.Command_MonitoringStart(out status, dataFolderName.FullName + "\\data.bin")).ConfigureAwait(false);
             }
             IsMonitoring = true;
 
