@@ -26,8 +26,18 @@ namespace HUREL.PG.MultiSlit
             Ncc.LogFileSync.OpenFtpSession();
         }
         static public bool IsMonitoring { get; private set; }
+        static public async Task StopMonitoringRunFtpAndFpgaLoop()
+        {
+            string status = "";
 
-        static async Task MonitoringRunFtpAndFpgaLoop(bool isTest = false)
+            //bool isFPGAstart = await Task.Run(() => FPGAControl.Command_MonitoringStart(out status)).ConfigureAwait(false);
+            //await Task.Run(() => FPGAControl.start_stop_usb());
+            bool isFPGAstart = await Task.Run(() => FPGAControl.Command_MonitoringStart(out status, "")).ConfigureAwait(false);
+            //bool isPGdisUpdate = await Task.Run(() => PGdistUpdate());
+            LogFileSync.StopSyncAndDownloadLogFile();
+            IsMonitoring = false;
+        }
+        static public async Task MonitoringRunFtpAndFpgaLoop(bool isTest = false)
         {
             if (!CurrentSession.IsReadyToStartSession)
             {

@@ -16,37 +16,19 @@ using System.Windows.Forms;
 using System.Windows.Input;
 using HUREL.PG.Ncc;
 using System.Collections.Concurrent;
+using HUREL.PG.MultiSlit;
+using System.Windows.Media;
 
 namespace HUREL_PG_GUI.ViewModels
 {
     public class VM_SpotScanning : ViewModelBase
     {
 
-        // Real-time Monitoring Objects
-        private List<PlanStruct_NCC> Plan_NCC = new List<PlanStruct_NCC>();
-        private List<LogStruct_NCC> Log_NCC = new List<LogStruct_NCC>();
-        private List<PGStruct> PG = new List<PGStruct>();
-        private List<PlanLogMergedDataStruct> PlanLogMergedData = new List<PlanLogMergedDataStruct>();
-        private List<PlanLogPGMergedDataStruct> MergedData = new List<PlanLogPGMergedDataStruct>();
-        private List<SpotMapStruct> spotMap;
-        private List<BeamRangeMapStruct> beamRangeMap;
-        // Configuration
-        public static Configuration_NCC _Configuration_NCC = new Configuration_NCC();
-
-        public class Configuration_NCC
-        {
-            // Path
-            public string Path_Datas;
-            public string Path_remote; // Log File Sync
-            public string Path_local;  // Log File Sync
-
-            // Parameters
-            public List<GapPeakAndRangeStruct> GapPeakAndRange = new List<GapPeakAndRangeStruct>();
-        }
 
         // Visualized Objects
         public ObservableCollection<BeamRangeMapStruct> VM_BeamRangeMap { get; set; }
-        public ObservableCollection<SpotMapStruct> VM_SpotMap { get; set; }
+        public ObservableCollection<SpotMapDraing> VM_SpotMap { get; set; }
+        public record SpotMapDraing(double X, double Y, double MU, SolidColorBrush Color);
 
 
         //static public CRUXELLMSPGC FPGAControl;
@@ -60,45 +42,7 @@ namespace HUREL_PG_GUI.ViewModels
         private void ConfigurationSetting_NCC()
         {
             // Path
-            string DefaultPath = Directory.GetParent(Directory.GetParent(Environment.CurrentDirectory).Parent.FullName).FullName;
-            _Configuration_NCC.Path_Datas = Path.Combine(DefaultPath, "Datas");
-            //_Configuration_NCC.Path_remote = @"/00. remote/";
-            //_Configuration_NCC.Path_local = @"D:\OneDrive - 한양대학교\01. Research\01. 통합 제어 프로그램\01. OLD\02. FTP\RebexTinySftpServer-1.0.11\data\00. local\";
-            _Configuration_NCC.Path_remote = @"/PBSdata/test/clinical/tr3/planId/beamId/fractionId/";
-            _Configuration_NCC.Path_local = @"C:\Users\JungJaerin\Desktop\FTP\";
-
-            // Object
-            _Configuration_NCC.GapPeakAndRange = GapPeakAndRangeRead(Path.Combine(_Configuration_NCC.Path_Datas, "gapPeakAndRange.txt"));
         }
-
-        private List<GapPeakAndRangeStruct> GapPeakAndRangeRead(string path)
-        {
-            List<GapPeakAndRangeStruct> GapPeakAndRange = new List<GapPeakAndRangeStruct>();
-
-            using (FileStream fs = new FileStream(path, FileMode.Open))
-            {
-                using (StreamReader sr = new StreamReader(fs, Encoding.UTF8, false))
-                {
-                    string lines = null;
-                    string[] tempString = null;
-
-                    while ((lines = sr.ReadLine()) != null)
-                    {
-                        GapPeakAndRangeStruct temp = new GapPeakAndRangeStruct();
-
-                        tempString = lines.Split("\t");
-
-                        temp.Energy = Convert.ToDouble(tempString[0]);
-                        temp.GapValue = Convert.ToDouble(tempString[1]);
-
-                        GapPeakAndRange.Add(temp);
-                    }
-                }
-            }
-            return GapPeakAndRange;
-        }
-
-
         #region Binding
 
         static public bool is_Watcherstart = false;
@@ -344,219 +288,31 @@ namespace HUREL_PG_GUI.ViewModels
                 {
                     return;
                 }
-
-                Task monitoringRunFtpAndFpgaLoop = MonitoringRunFtpAndFpgaLoop();
-
-                await monitoringRunFtpAndFpgaLoop.ConfigureAwait(false);
+                isMonitoring = true;
+                await MultislitControl.MonitoringRunFtpAndFpgaLoop();
             }
             else
             {
                 string status = "";
-
+                await MultislitControl.StopMonitoringRunFtpAndFpgaLoop();
                 //bool isFPGAstart = await Task.Run(() => FPGAControl.Command_MonitoringStart(out status)).ConfigureAwait(false);
                 //await Task.Run(() => FPGAControl.start_stop_usb());
                 bool isFPGAstart = await Task.Run(() => VM_MainWindow.FPGAControl.Command_MonitoringStart(out status, "")).ConfigureAwait(false);
                 //bool isPGdisUpdate = await Task.Run(() => PGdistUpdate());
-                LogFileSync.StopSyncAndDownloadLogFile();
 
                 VMStatus = "Idle";
                 IsMonitoring = false;
             }
         }
 
-        private async Task MonitoringRunFtpAndFpgaLoop(bool isTest = false)
-        {
-            // Make local path
-            DirectoryInfo mainDataFolder = new DirectoryInfo(".\\data");
-            if (mainDataFolder.Exists == false)
-            {
-                mainDataFolder.Create();
-            }
-            string folderName = DateTime.Now.ToString("yyyyMMddHHmm") + "_" + "NCC" + "_" + patientID + "_" + patientName + "_" + planFileName;
-            DirectoryInfo dataFolderName = new DirectoryInfo(".\\data\\" + folderName);
-            if (dataFolderName.Exists == false)
-            {
-                dataFolderName.Create();
-            }
-            else
-            {
-                int i = 0;
-                dataFolderName = new DirectoryInfo(".\\data\\" + folderName + "(" + i + ")");
-                while (dataFolderName.Exists == false)
-                {
-                    ++i;
-                    dataFolderName = new DirectoryInfo(".\\data\\" + folderName + "(" + i + ")");
-                }
-                dataFolderName.Create();
-            }
-            DirectoryInfo logFileFodler = new DirectoryInfo(dataFolderName.FullName + "\\log");
-            if (logFileFodler.Exists == false)
-            {
-                logFileFodler.Create();
-            }
-
-            Task syncTask =  LogFileSync.SyncAndDownloadLogFile(logFileFodler.FullName, isTest);
-
-            string status = "";
-            if (!isTest)
-            {
-                bool isFPGAstart = await Task.Run(() => VM_MainWindow.FPGAControl.Command_MonitoringStart(out status, logFileFodler.FullName + "\\data.bin")).ConfigureAwait(false);
-            }           
-            VMStatus = status;
-            IsMonitoring = true;
-
-            Task readLogFileLoop = ReadLogFilesLoop(logFileFodler.FullName);
-            Task readPGDataLoop = Task.Run(() =>ReadPgDataLoop());
-            Task mergeAndDrawDataLoop = MergeAndDrawDataLoop();
-
-
-            await syncTask;
-            await readLogFileLoop;
-            await readPGDataLoop;
-            await mergeAndDrawDataLoop;
-        }
         Mutex loopMutex = new Mutex(false, "loop mutex");
-        private async Task ReadLogFilesLoop(string folderName)
-        {
-            NCCLogFileLoad Class = new NCCLogFileLoad();
-
-            while (IsMonitoring)
-            {
-                loopMutex.WaitOne();
-                try
-                {
-                    
-                    await Task.Run(() => Log_NCC = Class.LogDatasLoad_PostProcessing(folderName)).ConfigureAwait(false);
-                    Trace.WriteLine(Log_NCC.Count);
-                    CurrentLayer = Log_NCC[Log_NCC.Count - 1].LayerNumber + 1;
-                    
-                }
-                catch (Exception ex)
-                {
-                    //Trace.WriteLine("Log update error");
-                    Log_NCC = null;
-                }
-                loopMutex.ReleaseMutex();
-
-                Thread.Sleep(1);
-            }
-        }
-
-        private void ReadPgDataLoop()
-        {
-            while (IsMonitoring)
-            {
-                loopMutex.WaitOne();
-                try
-                {
-                    
-                    PG = VM_MainWindow.FPGAControl.PG_raw;
-                }
-                catch
-                {
-                    PG = null;
-                }
-                loopMutex.ReleaseMutex();
-                
-                Thread.Sleep(1);
-            }
-        }
-
-
-        private async Task MergeAndDrawDataLoop()
-        {
-            NCCAnalysisClass Class = new NCCAnalysisClass();
-
-            while (IsMonitoring)
-            {
-                loopMutex.WaitOne();
-                try
-                {
-                    if (PG == null || Log_NCC == null)
-                    {
-                        loopMutex.ReleaseMutex();
-                        continue;
-                    }
-                    Task<List<PlanLogPGMergedDataStruct>> mergeTask = Class.GenerateMergedData_PostProcessing(Plan_NCC, Log_NCC, PG); // static data
-
-                    MergedData = await mergeTask;
-                    loopMutex.ReleaseMutex();
-
-                    int StartLayer = 0;
-                    int LastLayer = MergedData.Last().Log_LayerNumber;
-
-                    Task<List<SpotMapStruct>> SpotMapTask = Class.GenerateSpotMap(MergedData, 0); // 초기에는 1번째 Layer가 보여지도록
-                    Task<List<BeamRangeMapStruct>> BeamRangeMapTask = Class.GenerateBeamRangeMap(MergedData, 7, StartLayer, LastLayer, 1);
-
-                    spotMap = await SpotMapTask;
-                    beamRangeMap = await BeamRangeMapTask;
-
-                    VM_SpotMap = new ObservableCollection<SpotMapStruct>();
-                    spotMap.ForEach(x => VM_SpotMap.Add(x));
-
-                    VM_BeamRangeMap = new ObservableCollection<BeamRangeMapStruct>();
-                    beamRangeMap.ForEach(x => VM_BeamRangeMap.Add(x));
-
-                    OnPropertyChanged(nameof(VM_SpotMap));
-                    OnPropertyChanged(nameof(VM_BeamRangeMap));
-                    await DrawSpotMap();
-                    Thread.Sleep(1);
-                }
-                catch
-                {
-                    Trace.WriteLine("Merge And Draw Data Loop done");
-                }
-            }
-
-        }
-
         private async Task DrawSpotMap()
         {
-            #region Test Code(2022-02-17), Un-Activated
-
-            //for (int j = 0; j < 10; j++)
-            //{
-            //    Trace.WriteLine($"{j}: Spot Map Speed Evaluation Start");
-
-            //    for (int i = 1; i < 12; i++)
-            //    {
-            //        //Trace.WriteLine($"{i}: Start");
-
-            //        Stopwatch sw = new Stopwatch();
-            //        sw.Start();
-
-            //        NCCAnalysisClass Class = new NCCAnalysisClass();
-
-            //        Task<List<SpotMapStruct>> SpotMapTask = Class.GenerateSpotMap(MergedData, i - 1);
-            //        spotMap = await SpotMapTask;
-
-            //        VM_SpotMap = new ObservableCollection<SpotMapStruct>();
-            //        spotMap.ForEach(x => VM_SpotMap.Add(x));
-            //        OnPropertyChanged(nameof(VM_SpotMap));
-
-            //        sw.Stop();
-            //        Trace.WriteLine($"{sw.ElapsedMilliseconds}");
-
-            //    }
-            //    Trace.WriteLine($"");
-            //}
-
-            #endregion
-
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
-
-            NCCAnalysisClass Class = new NCCAnalysisClass();
-
-            Task<List<SpotMapStruct>> SpotMapTask = Class.GenerateSpotMap(MergedData, CurrentLayer - 1);
-            spotMap = await SpotMapTask;
-
-            VM_SpotMap = new ObservableCollection<SpotMapStruct>();
-            spotMap.ForEach(x => VM_SpotMap.Add(x));
-            OnPropertyChanged(nameof(VM_SpotMap));
-
-            sw.Stop();
-            Trace.WriteLine($"{sw.ElapsedMilliseconds} ms");
+            while(isMonitoring)
+            {
+                VM_SpotMap 
+            }
+            
         }
 
         private RelayCommand _LoadDICOMCommand;
@@ -578,20 +334,18 @@ namespace HUREL_PG_GUI.ViewModels
         }
         private void LoadPlanFile()
         {
-            Plan_NCC = new List<PlanStruct_NCC>(); // Data 생성
-
             OpenFileDialog dialog = new OpenFileDialog();
             dialog.Filter = "Pld|*.pld|Text|*.txt|All|*.*";
             dialog.ShowDialog();
             VMStatus = "Loading Plan File";
-            Plan_NCC = PlanFileClass_NCC.LoadPlanFile(dialog.FileName, true); ////////////////////////////////////
-            if (Plan_NCC != null)
+            MultislitControl.CurrentSession.LoadPlanFile(dialog.FileName);
+            if (MultislitControl.CurrentSession.IsPlanLoad)
             {
                 PatientID = "00000";
                 PatientName = "Test";
                 VMStatus = "Plan File loaded";
                 planFileName = Path.GetFileNameWithoutExtension(dialog.FileName);
-                Plan_TotalLayer = Plan_NCC[Plan_NCC.Count - 1].LayerNumber;
+                Plan_TotalLayer = MultislitControl.CurrentSession.Layers[MultislitControl.CurrentSession.Layers.Count].LayerNumber;
                 CurrentLayer = 1;
                 Is_PlanFileLoaded = true;
             }
@@ -730,57 +484,6 @@ namespace HUREL_PG_GUI.ViewModels
         ////////////////////////////////////////////////////////
 
         #region Code/GUI Verificaiton
-
-
-        // 01. Binary, Plan File Load (완료, 2/22 23:56)
-        private RelayCommand _TestCommand1;
-        public ICommand TestCommand1
-        {
-            get
-            {
-                return _TestCommand1 ?? (_TestCommand1 = new RelayCommand(Test1));
-            }
-        }
-
-        private async void Test1()
-        {
-            VMStatus = "Start up ftp server";
-
-            // Make local path
-
-            IsMonitoring = true;
-            await ReadLogFilesLoop("./testLogFolder");
-        }
-
-
-        // 02. Log File Synchronization Start (완료, 2/23, 01:15)
-        private RelayCommand _TestCommand2;
-        public ICommand TestCommand2
-        {
-            get
-            {
-                return _TestCommand2 ?? (_TestCommand2 = new RelayCommand(Test2));
-            }
-        }
-        private void Test2()
-        {
-            LogFileSync.StopSyncAndDownloadLogFile();
-
-        }
-
-        // 03. Real-time Code Verification Start
-        private RelayCommand _TestCommand3;
-        public ICommand TestCommand3
-        {
-            get
-            {
-                return _TestCommand3 ?? (_TestCommand3 = new RelayCommand(Test3));
-            }
-        }
-        private async void Test3()
-        {
-       
-        }
         
         #endregion
 

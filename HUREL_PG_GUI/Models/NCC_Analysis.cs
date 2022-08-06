@@ -253,22 +253,9 @@ namespace HUREL_PG_GUI.Models
 
         public async Task<List<SpotMapStruct>> GenerateSpotMap(List<PlanLogPGMergedDataStruct> mergedData, int SelectedLayer)
         {
-            List<double[]> GaussianWeightMap = new List<double[]>();
-            double[] RangeDifference;
+  
             List<SpotMapStruct> SpotMap = new List<SpotMapStruct>(); // Return  
 
-            List<PlanLogPGMergedDataStruct> Spots = (from spot in mergedData
-                                                     where spot.Log_LayerNumber == SelectedLayer
-                                                     where spot.Log_State != NCCBeamState.Tuning
-                                                     select spot).ToList();
-            double PeakToRangeGap = CalcGap(VM_SpotScanning._Configuration_NCC.GapPeakAndRange, Spots.Last().Plan_LayerEnergy);
-
-            GaussianWeightMap = GetGaussianWeightMap_SpotMap(Spots);
-            RangeDifference = GetRangeDifference_SpotMap(Spots, GaussianWeightMap, PeakToRangeGap);
-            //SpotMap = GetSelectedLayerSpotMap(Spots, RangeDifference, -6.5f, 3f);
-            SpotMap = GetSelectedLayerSpotMap(Spots, RangeDifference, -10f, 10f);
-
-            //Trace.Write($"{Spots.Count} spots ");
 
             return SpotMap;
         }
@@ -438,7 +425,6 @@ namespace HUREL_PG_GUI.Models
                             if (distance <= 3 * sigma)
                             {
                                 double[] PGdist_Shifted = new double[71]; // 위치가 바뀜
-                                PGdist_Shifted = ShiftPGdistribution(SelectedSpots[k], VM_SpotScanning._Configuration_NCC.GapPeakAndRange);
 
                                 double weight = Math.Exp(-0.5 * Math.Pow(distance / sigma, 2));
                                 PGdist_Shifted = PGdist_Shifted.Select(x => x * weight).ToArray();

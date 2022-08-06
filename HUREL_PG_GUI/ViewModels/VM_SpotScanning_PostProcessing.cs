@@ -42,7 +42,7 @@ namespace HUREL_PG_GUI.ViewModels
 
         private void StaticParameterSetting()
         {
-            GapPeakAndRange = VM_SpotScanning._Configuration_NCC.GapPeakAndRange;
+           
         }
 
         #region Binding
