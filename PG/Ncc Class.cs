@@ -2340,10 +2340,6 @@ namespace HUREL.PG.Ncc
                 return range = -10000;
             }
 
-
-
-
-
             double[] cnt_71ch_2ndDer_reverse = new double[69];
             for (int i = 0; i < 69; i++)
             {
