@@ -16,8 +16,7 @@
 
   <ItemGroup>
     <Reference Include="CyUSB">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Cypress\EZ-USB FX3 SDK\1.3\bin\CyUSB.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Cypress\EZ-USB FX3 SDK\1.3\bin\CyUSB.dll</HintPath>
     </Reference>
   </ItemGroup>
 
