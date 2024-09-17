@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,11 +16,21 @@ namespace PG.Fpga
         //V_PULSE_DATA = typecast(reshape(chunkData(i + 10:i + 11,:), [], 1), 'uint16');
         //T_PULSE_TIME = typecast(reshape(chunkData(i + 12:i + 15,:), [], 1), 'uint32');
 
-        public UInt32 secTime;
-        public UInt16 chNumber;
-        public UInt16 preData;
-        public UInt16 vPulseData;
-        public UInt32 tPulseTime;
+        public readonly UInt32 secTime;
+        public readonly UInt16 chNumber;
+        public readonly UInt16 preData;
+        public readonly UInt16 vPulseData;
+        public readonly UInt32 tPulseTime;
+
+        public DaqData(byte[] chunkData)
+        {
+            Debug.Assert(chunkData.Length == 20);
+            secTime = BitConverter.ToUInt32(chunkData, 0);
+            chNumber = BitConverter.ToUInt16(chunkData, 4);
+            preData = BitConverter.ToUInt16(chunkData, 6);
+            vPulseData = BitConverter.ToUInt16(chunkData, 10);
+            tPulseTime = BitConverter.ToUInt32(chunkData, 12);
+        }
 
         public int channel
         {
@@ -28,6 +39,7 @@ namespace PG.Fpga
                 return chNumber;
             }
         }
+        // in nanoseconds
         public long timestamp
         {
             get

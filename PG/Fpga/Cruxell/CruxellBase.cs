@@ -427,33 +427,7 @@ namespace PG.Fpga.Cruxell
                 while (ParsedBuffer.TryTake(out byte[] Item, 1)) // write to dump file
                 {
                     Debug.Assert(Item.Length == 20, "Item length is not 20");
-                    DaqData daqData = new DaqData();
-                    //SEC_TIME = typecast(reshape(chunkData(i: i + 3,:), [], 1), 'uint32');
-
-                    //CH_NUMBER = typecast(reshape(chunkData(i + 4:i + 5,:), [], 1), 'uint16');
-                    //PRE_DATA = typecast(reshape(chunkData(i + 6:i + 7,:), [], 1), 'uint16');
-                    //V_PULSE_DATA = typecast(reshape(chunkData(i + 10:i + 11,:), [], 1), 'uint16');
-                    //T_PULSE_TIME = typecast(reshape(chunkData(i + 12:i + 15,:), [], 1), 'uint32');
-
-                    //    data = [double(CH_NUMBER(1:falseIdx-1)), double(SEC_TIME(1:falseIdx-1)), double(T_PULSE_TIME(1:falseIdx-1)),  double(V_PULSE_DATA(1:falseIdx-1))];
-                    ////
-                    //timeInNano = data(:, 2) * 1e10 + data(:, 3) * 10).* double(data(:, 1) == 144)
-                    //                               + double(data(:, 2) * 1e10 + data(:, 3) * 8).* double(data(:, 1) ~= 144;
-
-                    //dataFinal = [data(:, 1), timeInNano, data(:, 4)];
-
-                    // flip byte
-                    UInt32 secTime = BitConverter.ToUInt32(Item, 0);
-                    UInt16 chNumber = BitConverter.ToUInt16(Item, 4);
-                    UInt16 preData = BitConverter.ToUInt16(Item, 6);
-                    UInt16 vPulseData = BitConverter.ToUInt16(Item, 10);
-                    UInt32 tPulseTime = BitConverter.ToUInt32(Item, 12);
-
-                    daqData.secTime = secTime;
-                    daqData.chNumber = chNumber;
-                    daqData.preData = preData;
-                    daqData.vPulseData = vPulseData;
-                    daqData.tPulseTime = tPulseTime;
+                    DaqData daqData = new DaqData(Item);
                     DaqDataList.Add(daqData);
                 }
 

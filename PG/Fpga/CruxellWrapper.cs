@@ -47,6 +47,9 @@ namespace PG.Fpga
         {
             return CruxellBase.DaqDataList.Count;
         }
+        public static List<DaqData> GetDaqData() {
+            return CruxellBase.DaqDataList;
+        }
 
         public static void TestWriteData()
         {
