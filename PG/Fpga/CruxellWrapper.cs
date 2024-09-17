@@ -11,13 +11,14 @@ namespace PG.Fpga
 {
     public static class CruxellWrapper
     {
+        private static bool IsFirstTime = true;
         private static CruxellBase CruxellBase = new CruxellBase();
         public static void StartFpgaDaq(string fileName = "")
         {
             if (CruxellBase.bRunning)
             {
                 Trace.WriteLine("FpgaDaq is already running");
-                return;                
+                return;
             }
             if (fileName == "")
             {
@@ -39,6 +40,37 @@ namespace PG.Fpga
             }
             Trace.WriteLine("FpgaDaq Stop");
             CruxellBase.start_stop_usb();
+
+        }
+
+        public static int GetDataCount()
+        {
+            return CruxellBase.DaqDataList.Count;
+        }
+
+        public static void TestWriteData()
+        {
+            List<DaqData> daqDatas = CruxellBase.DaqDataList;
+            // write as csv file
+            string fileName = "test_convert.csv";
+            using (System.IO.StreamWriter file = new System.IO.StreamWriter(fileName, false))
+            {
+                file.WriteLine("channel,timestamp,value");
+                foreach (DaqData daqData in daqDatas)
+                {
+                    file.WriteLine($"{daqData.channel},{daqData.timestamp},{daqData.value}");
+                }
+            }
+            fileName = "test_raw.csv";
+            using (System.IO.StreamWriter file = new System.IO.StreamWriter(fileName, false))
+            {
+                //    datatmp = [double(CH_NUMBER(1:falseIdx-1)), double(SEC_TIME(1:falseIdx-1)), double(T_PULSE_TIME(1:falseIdx-1)),  double(V_PULSE_DATA(1:falseIdx-1))];
+                file.WriteLine("channel,secTime,tPulseTime,vPulseData");
+                foreach (DaqData daqData in daqDatas)
+                {
+                    file.WriteLine($"{daqData.chNumber},{daqData.secTime},{daqData.tPulseTime},{daqData.vPulseData}");
+                }
+            }
 
         }
 

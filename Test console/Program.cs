@@ -22,6 +22,8 @@ class TestClass
         // wait for 30 seconds
         System.Threading.Thread.Sleep(30000);
         CruxellWrapper.StopFpgaDaq();
+        Console.WriteLine("Data count: " + CruxellWrapper.GetDataCount());
+        CruxellWrapper.TestWriteData();
     }
     static void Main(string[] args)
     {

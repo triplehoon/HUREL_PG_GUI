@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -335,6 +336,129 @@ namespace PG.Fpga.Cruxell
                     Thread.Sleep(0);
                 }
             }
+        }
+
+
+        private void RealtimeParsingThread()
+        {
+            Trace.WriteLine("CSH : ParsingThread start");
+
+            bool flagChunk = false;
+            byte[] chunk = new byte[20];
+            int chunkIndex = 0;
+            int feCount = 0;
+
+            // print bounded buffer size
+            Trace.WriteLine("CSH : RealtimeParsingBuffer bounded capacity : " + RealtimeParsingBuffer.BoundedCapacity);
+              
+            while (thread_run)
+            {
+                byte[] Item;
+
+                while (RealtimeParsingBuffer.TryTake(out Item, 1)) // write to dump file
+                {
+                    int i = 0; 
+                    while (!flagChunk && i < Item.Length)
+                    {
+                        if (Item[i] == 254)
+                        {
+                            feCount++;
+                            if (feCount == 4)
+                            {
+                                if (i + 1 >= Item.Length)
+                                {
+                                    i++;
+                                    break;
+                                }
+                                if (Item[i + 1] != 254)
+                                {
+                                    flagChunk = true;
+                                    feCount = 0;
+                                    Trace.WriteLine("CSH: Find FEFEFEFE");
+                                    i++;
+                                    break;
+                                }
+                                else
+                                {
+                                    feCount = 0;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            feCount = 0;
+                        }
+                        i++;
+                    }
+                    if (flagChunk)
+                    {
+                        // seperate chunk by 20 bytes
+                        while (i < Item.Length)
+                        {
+                            chunk[chunkIndex] = Item[i];
+                            chunkIndex++;
+                            i++;
+                            if (chunkIndex == 20)
+                            {   // write to Trace
+                                chunkIndex = 0;
+                                // check last 4 bytes FE, FE, FE, FE
+                                if (!(chunk[chunk.Length - 4] == 254 && chunk[chunk.Length - 3] == 254 && chunk[chunk.Length - 2] == 254 && chunk[chunk.Length - 1] == 254))
+                                {
+                                    Trace.WriteLine("CSH: Chunk is not end with FEFEFEFE. Retry to serch FEFEFEFE");
+                                    flagChunk = false;
+                                    break;
+                                }
+                                ParsedBuffer.Add(chunk);
+                                chunk = new byte[20];
+                            }
+                        }
+                    }
+                    Thread.Sleep(0);
+                }
+            }            
+        }
+
+        private void DaqDataGeneratorThread()
+        {
+            DaqDataList = new List<DaqData>();
+            Trace.WriteLine("CSH : DaqDataGeneratorThread start");
+            while (thread_run)
+            {
+                while (ParsedBuffer.TryTake(out byte[] Item, 1)) // write to dump file
+                {
+                    Debug.Assert(Item.Length == 20, "Item length is not 20");
+                    DaqData daqData = new DaqData();
+                    //SEC_TIME = typecast(reshape(chunkData(i: i + 3,:), [], 1), 'uint32');
+
+                    //CH_NUMBER = typecast(reshape(chunkData(i + 4:i + 5,:), [], 1), 'uint16');
+                    //PRE_DATA = typecast(reshape(chunkData(i + 6:i + 7,:), [], 1), 'uint16');
+                    //V_PULSE_DATA = typecast(reshape(chunkData(i + 10:i + 11,:), [], 1), 'uint16');
+                    //T_PULSE_TIME = typecast(reshape(chunkData(i + 12:i + 15,:), [], 1), 'uint32');
+
+                    //    data = [double(CH_NUMBER(1:falseIdx-1)), double(SEC_TIME(1:falseIdx-1)), double(T_PULSE_TIME(1:falseIdx-1)),  double(V_PULSE_DATA(1:falseIdx-1))];
+                    ////
+                    //timeInNano = data(:, 2) * 1e10 + data(:, 3) * 10).* double(data(:, 1) == 144)
+                    //                               + double(data(:, 2) * 1e10 + data(:, 3) * 8).* double(data(:, 1) ~= 144;
+
+                    //dataFinal = [data(:, 1), timeInNano, data(:, 4)];
+
+                    // flip byte
+                    UInt32 secTime = BitConverter.ToUInt32(Item, 0);
+                    UInt16 chNumber = BitConverter.ToUInt16(Item, 4);
+                    UInt16 preData = BitConverter.ToUInt16(Item, 6);
+                    UInt16 vPulseData = BitConverter.ToUInt16(Item, 10);
+                    UInt32 tPulseTime = BitConverter.ToUInt32(Item, 12);
+
+                    daqData.secTime = secTime;
+                    daqData.chNumber = chNumber;
+                    daqData.preData = preData;
+                    daqData.vPulseData = vPulseData;
+                    daqData.tPulseTime = tPulseTime;
+                    DaqDataList.Add(daqData);
+                }
+
+            }
+
         }
 
         //------------------------------+---------------------------------------------------------------
@@ -1560,8 +1684,10 @@ namespace PG.Fpga.Cruxell
         double test_data = 0;
         double test_data2 = 0;
         int time_out = 0;
-        BlockingCollection<byte[]> test_buffer = new BlockingCollection<byte[]>(1000);
-        public BlockingCollection<byte[]> RealtimeParsingBuffer = new BlockingCollection<byte[]>(1000);
+        BlockingCollection<byte[]> test_buffer = new BlockingCollection<byte[]>();
+        BlockingCollection<byte[]> RealtimeParsingBuffer = new BlockingCollection<byte[]>();
+        BlockingCollection<byte[]> ParsedBuffer = new BlockingCollection<byte[]>();
+        public List<DaqData> DaqDataList = new List<DaqData>();
         // byte[] test2_buffer = new byte[1024 * 1024 * 700];
         int p_head = 0; // test2_buffer의 50개중 몇번째인지
         int p_tail = 0;
@@ -1996,6 +2122,8 @@ namespace PG.Fpga.Cruxell
         Task tListen;
         Task tParsing;
         Task tParsing2;
+        Task tRealtimeParsing;
+        Task tDaqDataGenerator;
         static public bool bRunning;
         static int bFinalCall;
 
@@ -2310,6 +2438,9 @@ namespace PG.Fpga.Cruxell
                 while (RealtimeParsingBuffer.TryTake(out Item, 1))
                 {
                 }
+                while (ParsedBuffer.TryTake(out Item, 1))
+                {
+                }
 
                 Trace.WriteLine("HY : [Try] Send 0000... ");
 
@@ -2360,13 +2491,18 @@ namespace PG.Fpga.Cruxell
                 bRunning = true;
                 bFinalCall = 0;
                 thread_run = true;
-           
+
                 Trace.WriteLine("HY : [Try] Start XferThread");
                 tListen = new Task(new Action(XferThread));
                 tListen.Start();
                 Trace.WriteLine("HY : [Try] Start ParsingThread");
                 tParsing = new Task(new Action(ParsingThread));
-                tParsing.Start();                 
+                tParsing.Start();
+                tRealtimeParsing = new Task(new Action(RealtimeParsingThread));
+                tRealtimeParsing.Start();
+                tDaqDataGenerator = new Task(new Action(DaqDataGeneratorThread));
+                tDaqDataGenerator.Start();
+
             }
             else
             {
@@ -2378,13 +2514,27 @@ namespace PG.Fpga.Cruxell
                 elapsed = t2 - t1;
                 xferRate = (long)(XferBytes / elapsed.TotalMilliseconds);
                 xferRate = xferRate / (int)100 * (int)100;
+                if (tListen != null)
+                {
+                    tListen.Wait();
+                    tListen = null;
+                    bRunning = false;
+                }
 
-                tListen.Wait();
-                tListen = null;
+                if (tParsing != null)
+                {
+                    thread_run = false;
+                    tParsing.Wait();
+                    tParsing = null;
 
-                thread_run = false;
-                tParsing.Wait();
-                tParsing = null;
+                    tRealtimeParsing.Wait();
+                    tRealtimeParsing = null;
+
+                    tDaqDataGenerator.Wait();
+                    tDaqDataGenerator = null;
+                }
+
+
 
                 // 2023.02.15 [intellee] 최대 5초 기다리기
                 Stopwatch sw = new Stopwatch();
@@ -2404,6 +2554,7 @@ namespace PG.Fpga.Cruxell
                 terminate_file_save();
                 Trace.WriteLine("HY : [Try] input_disable enabled");
                 input_disable(true);    // 입력칸 enable
+                bRunning = false;
             }
         }
 
@@ -2615,14 +2766,17 @@ namespace PG.Fpga.Cruxell
                                     break;
 
                                 byte[] temp_buffer = new byte[16384];
+                                byte[] temp_buffer1 = new byte[16384];
                                 for (int ii = 0; ii < 16384; ++ii)
                                 {
                                     temp_buffer[ii] = xBufs[k][i * 16384 + ii];
+                                    temp_buffer1[ii] = xBufs[k][i * 16384 + ii];
                                 }
                                 //Buffer.BlockCopy(xBufs[k], 0, temp_buffer, 0, 16384);
                                 test_buffer.Add(temp_buffer);//timeout
                                                              // 넣을때
-                                RealtimeParsingBuffer.Add(temp_buffer);
+                                
+                                RealtimeParsingBuffer.Add(temp_buffer1);
 
                                 for (int ii = 0; ii < 16384; ++ii)
                                 {
@@ -2645,11 +2799,13 @@ namespace PG.Fpga.Cruxell
                             if (EndPoint.FinishDataXfer(ref cBufs[k], ref xBufs[k], ref len, ref oLaps[k]))
                             {
                                 byte[] temp_buffer = new byte[len];
+                                byte[] temp_buffer1 = new byte[len];
                                 Buffer.BlockCopy(xBufs[k], 0, temp_buffer, 0, len);
+                                Buffer.BlockCopy(xBufs[k], 0, temp_buffer1, 0, len);
 
                                 test_buffer.Add(temp_buffer);//normal
                                                              // 넣을때
-                                RealtimeParsingBuffer.Add(temp_buffer);
+                                RealtimeParsingBuffer.Add(temp_buffer1);
 
 
                                 XferBytes += len;
@@ -3416,7 +3572,7 @@ namespace PG.Fpga.Cruxell
         }
 
         public bool is_converting = false;
-  
+
     }
 }
 #pragma warning restore CS0414 // Naming Styles
