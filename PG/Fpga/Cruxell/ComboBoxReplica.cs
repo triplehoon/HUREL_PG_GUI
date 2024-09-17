@@ -16,9 +16,12 @@ namespace PG.Fpga.Cruxell
             get => _selectedIndex;
             set
             { 
+                if (_selectedIndex == value) {
+                    return;
+                }
                 if (value >= 0 && value < Items.Count)
                 {
-                    SelectedIndex = value;
+                    _selectedIndex = value;
                     SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
                 }
                 else
@@ -33,10 +36,24 @@ namespace PG.Fpga.Cruxell
         {
             get
             {
-                return Items[SelectedIndex];
+                return Items[_selectedIndex];
             }
             set
             {
+                if (value == null)
+                {
+                    Debug.Assert(false, "Invalid string");
+                    return;
+                }
+                if (value == Text)
+                {
+                    return;
+                }
+                if (Items.Count == 0)
+                {
+                    Debug.Assert(false, "No items in the list");
+                    return;
+                }
                 // find set string in Items
                 for (int i = 0; i < Items.Count; i++)
                 {
@@ -56,8 +73,7 @@ namespace PG.Fpga.Cruxell
         {       
             Name = name;
             Items = new List<string>();
-            SelectedIndex = 0;            
-            _selectedIndex = 0;
+            _selectedIndex = -1;
             SelectedIndexChanged = new EventHandler((sender, e) => { });
         }
     }

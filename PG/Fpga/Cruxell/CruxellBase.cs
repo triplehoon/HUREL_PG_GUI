@@ -39,9 +39,23 @@ namespace PG.Fpga.Cruxell
             // kiwa72(2022.11.09 h15) - ini 추가
             public int h_thres;
             public int l_thres;
+
+            public void PrintIniValues()
+            {
+                Trace.WriteLine($"mode : {mode}");
+                Trace.WriteLine($"smoothing : {smoothing}");
+                Trace.WriteLine($"t_delay : {t_delay}");
+                Trace.WriteLine($"f_value : {f_value}");
+                Trace.WriteLine($"t_spectrum_period : {t_spectrum_period}");
+                Trace.WriteLine($"h_thres : {h_thres}");
+                Trace.WriteLine($"l_thres : {l_thres}");
+                Trace.WriteLine($"high_thres_pulse : {string.Join(",", high_thres_pulse)}");
+                Trace.WriteLine($"low_thres_pulse : {string.Join(",", low_thres_pulse)}");
+                Trace.WriteLine($"low_thres_spectrum : {string.Join(",", low_thres_spectrum)}");
+            }
         };
 
-        STRUCT_INI struct_ini = new STRUCT_INI();
+        public STRUCT_INI struct_ini = new STRUCT_INI();
 
         // [변수] parsing 관련
         //public const int BYTES_PER_CH_OF_PULSE = 16;// pre 2 t puse2, v pulse2  t time 8 // ch 2 pre 2 pulse 2 time 8
@@ -246,6 +260,9 @@ namespace PG.Fpga.Cruxell
             cmb_smwindow_pulse.Text = SmoothingWindow;
             TB_0x16.Text = T_Delay;
             TB_0x17.Text = F_Value;
+
+            init_data_and_buffer();//ini파일도 세팅함 
+            init_USB();
         }
 
         //------------------------------+---------------------------------------------------------------
