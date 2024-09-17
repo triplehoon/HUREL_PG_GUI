@@ -1,7 +1,9 @@
 ﻿using HUREL.PG;
 using HUREL.PG.Ncc;
+using PG;
 using PG.Fpga;
 using System.Runtime.CompilerServices;
+using static PG.PgSession;
 
 
 
@@ -70,10 +72,13 @@ class TestClass
         CruxellWrapper.TestWriteData();
         Console.WriteLine("Done");
     }
+    static void TestSessionCreation()
+    {
+        PgSession session = new PgSession(eSessionType.NCC);
+    }
     static void Main(string[] args)
     {
-        TestCruxellLoading();
-        TestDeviceLoading();
         TestFpgaDaq();
+        TestSessionCreation();
     }
 }
