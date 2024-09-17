@@ -1561,6 +1561,7 @@ namespace PG.Fpga.Cruxell
         double test_data2 = 0;
         int time_out = 0;
         BlockingCollection<byte[]> test_buffer = new BlockingCollection<byte[]>(1000);
+        public BlockingCollection<byte[]> RealtimeParsingBuffer = new BlockingCollection<byte[]>(1000);
         // byte[] test2_buffer = new byte[1024 * 1024 * 700];
         int p_head = 0; // test2_buffer의 50개중 몇번째인지
         int p_tail = 0;
@@ -1995,7 +1996,7 @@ namespace PG.Fpga.Cruxell
         Task tListen;
         Task tParsing;
         Task tParsing2;
-        static bool bRunning;
+        static public bool bRunning;
         static int bFinalCall;
 
         // These are  needed for Thread to update the UI
@@ -2265,7 +2266,7 @@ namespace PG.Fpga.Cruxell
             SetOutputData(flag);
         }
 
-        private void start_stop_usb()
+        public void start_stop_usb()
         {
             // 사장님 - Start 눌렀을때
             if (MyDevice == null)
@@ -2280,7 +2281,7 @@ namespace PG.Fpga.Cruxell
                 return;
             }
 
-            if (StartBtn.Text.Equals("Start"))
+            if (!bRunning)
             {
                 // Test GetData from box
                 //get_data_from_box();
@@ -2304,6 +2305,9 @@ namespace PG.Fpga.Cruxell
                 // 2. 버퍼 비우기 
                 byte[] Item;
                 while (test_buffer.TryTake(out Item, 1))
+                {
+                }
+                while (RealtimeParsingBuffer.TryTake(out Item, 1))
                 {
                 }
 
@@ -2362,7 +2366,7 @@ namespace PG.Fpga.Cruxell
                 tListen.Start();
                 Trace.WriteLine("HY : [Try] Start ParsingThread");
                 tParsing = new Task(new Action(ParsingThread));
-                tParsing.Start();
+                tParsing.Start();                 
             }
             else
             {
@@ -2618,6 +2622,7 @@ namespace PG.Fpga.Cruxell
                                 //Buffer.BlockCopy(xBufs[k], 0, temp_buffer, 0, 16384);
                                 test_buffer.Add(temp_buffer);//timeout
                                                              // 넣을때
+                                RealtimeParsingBuffer.Add(temp_buffer);
 
                                 for (int ii = 0; ii < 16384; ++ii)
                                 {
@@ -2644,6 +2649,8 @@ namespace PG.Fpga.Cruxell
 
                                 test_buffer.Add(temp_buffer);//normal
                                                              // 넣을때
+                                RealtimeParsingBuffer.Add(temp_buffer);
+
 
                                 XferBytes += len;
                                 test_data += len;

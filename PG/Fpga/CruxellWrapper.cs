@@ -12,15 +12,34 @@ namespace PG.Fpga
     public static class CruxellWrapper
     {
         private static CruxellBase CruxellBase = new CruxellBase();
-        public static void StartFpgaDaq()
+        public static void StartFpgaDaq(string fileName = "")
         {
+            if (CruxellBase.bRunning)
+            {
+                Trace.WriteLine("FpgaDaq is already running");
+                return;                
+            }
+            if (fileName == "")
+            {
+                // filename as YYYYMMDD_HHMMSS
+                fileName = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                fileName += "_binary";
+            }
             Trace.WriteLine("FpgaDaq Start");
-            
+            CruxellBase.TB_file_name.Text = fileName;
+            CruxellBase.start_stop_usb();
         }
 
         public static void StopFpgaDaq()
         {
+            if (!CruxellBase.bRunning)
+            {
+                Trace.WriteLine("FpgaDaq is not running");
+                return;
+            }
             Trace.WriteLine("FpgaDaq Stop");
+            CruxellBase.start_stop_usb();
+
         }
 
         public static void PrintSettingValues()

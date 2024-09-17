@@ -36,6 +36,10 @@ namespace PG.Fpga.Cruxell
         {
             get
             {
+                if (_selectedIndex == -1)
+                {
+                    return string.Empty;
+                }
                 return Items[_selectedIndex];
             }
             set

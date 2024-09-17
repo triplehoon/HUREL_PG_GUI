@@ -16,9 +16,17 @@ class TestClass
     {
         CruxellWrapper.PrintDeviceList();
     }
+    private static void TestFpgaDaq()
+    {
+        CruxellWrapper.StartFpgaDaq();
+        // wait for 30 seconds
+        System.Threading.Thread.Sleep(30000);
+        CruxellWrapper.StopFpgaDaq();
+    }
     static void Main(string[] args)
     {
         TestCruxellLoading();
         TestDeviceLoading();
+        TestFpgaDaq();
     }
 }
