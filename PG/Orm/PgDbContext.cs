@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace PG.Orm
 {
-    internal class PgDbContext : DbContext
+    public class PgDbContext : DbContext
     {
         public PgDbContext()
         {
@@ -19,8 +19,8 @@ namespace PG.Orm
         }
 
         public DbSet<FpgaData> RawDataList { get; set; }
-        public virtual DbSet<>
-
+        public DbSet<NccLogData> NccLogDataList { get; set; }
+        public DbSet<SessionInfo> SessionInfos { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)

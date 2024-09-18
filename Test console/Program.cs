@@ -1,7 +1,11 @@
 ﻿using HUREL.PG;
 using HUREL.PG.Ncc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
 using PG;
 using PG.Fpga;
+using PG.Orm;
 using System.Runtime.CompilerServices;
 using static PG.PgSession;
 
@@ -76,9 +80,26 @@ class TestClass
     {
         PgSession session = new PgSession(eSessionType.NCC);
     }
-    static void Main(string[] args)
+    static void TestCreateConnectionWithDb()
     {
-        TestFpgaDaq();
-        TestSessionCreation();
+
     }
+    static void Main(string[] args)
+    {      
+        // Set up the dependency injection container
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddDbContext<PgDbContext>();
+
+        // Build the service provider and use it
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+       
+        // Resolve the DbContext and use it
+        using (PgDbContext dbContext = serviceProvider.GetRequiredService<PgDbContext>())
+        {
+           
+        }
+
+        serviceProvider.Dispose();
+    }
+
 }

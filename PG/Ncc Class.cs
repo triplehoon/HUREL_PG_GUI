@@ -255,6 +255,10 @@ namespace HUREL.PG.Ncc
                 gapPeakAndRange.Add(new GapPeakAndRange(227.100000000000, 3.30343961594278));
             }
         }
+
+        public NccLayer()
+        {
+        }
         #region Properties
         private List<NccSpot> spots;
         public List<NccSpot> Spots

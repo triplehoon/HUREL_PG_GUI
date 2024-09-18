@@ -28,8 +28,8 @@ namespace PG.Orm
         // Foreign Key
         [ForeignKey("SessionInfoOrm")]
         [Column("SessionInfoOrm_id")]
-        public required string SessionId { get; set; }
+        public string SessionId { get; set; }
 
-        public required Session Session { get; set; }  // Navigation property
+        public Session Session { get; set; }  // Navigation property
     }
 }

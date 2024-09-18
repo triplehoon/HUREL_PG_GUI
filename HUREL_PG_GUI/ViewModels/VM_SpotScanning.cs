@@ -15,7 +15,6 @@ using System.Windows.Forms;
 using System.Windows.Input;
 using HUREL.PG.Ncc;
 using System.Collections.Concurrent;
-using HUREL.PG.MultiSlit;
 using System.Windows.Media;
 
 namespace HUREL_PG_GUI.ViewModels
@@ -281,17 +280,15 @@ namespace HUREL_PG_GUI.ViewModels
         }
         private async Task MonitoringStart()
         {
-            if (!MultislitControl.IsMonitoring)
+            if (true)
             {
                 IsMonitoring = true;
                 Task drawing = DrawSpotMap();
-                MultislitControl.InitiateNcc();
-                await MultislitControl.MonitoringRunFtpAndFpgaLoop();
+ 
                 await drawing;
             }
             else
             {
-                await MultislitControl.StopMonitoringRunFtpAndFpgaLoop();
                 IsMonitoring = false;
                 
             }
@@ -303,13 +300,8 @@ namespace HUREL_PG_GUI.ViewModels
             while(isMonitoring)
             {
                 await Task.Delay(100);
-                if(MultislitControl.CurrentSession.Layers.Count == 0)
-                {
-                    continue;
-                }
-                CurrentLayer = MultislitControl.CurrentSession.Layers[MultislitControl.CurrentSession.Layers.Count() - 1].LayerNumber;
-                VM_SpotMap = new ObservableCollection<SpotMapDrawing>();
-                List<NccLayer> layers = MultislitControl.CurrentSession.Layers.FindAll(x => x.NccBeamState != NccSpot.NccBeamState.Tuning && x.LayerNumber == CurrentLayer);
+
+                List<NccLayer> layers = new List<NccLayer>();
                 List<SpotMap> spotMaps = new List<SpotMap>();
                 await Task.Run(() => { spotMaps = NccLayer.GetSpotMap(layers); });
                 for (int i = 0; i < spotMaps.Count; i++)
@@ -492,25 +484,7 @@ namespace HUREL_PG_GUI.ViewModels
             dialog.Filter = "Pld|*.pld|Text|*.txt|All|*.*";
             dialog.ShowDialog();
             VMStatus = "Loading Plan File";
-            MultislitControl.CurrentSession.LoadPlanFile(dialog.FileName);
-            if (MultislitControl.CurrentSession.IsPlanLoad)
-            {
-                PatientID = "00000";
-                PatientName = "Test";
-                VMStatus = "Plan File loaded";
-                planFileName = Path.GetFileNameWithoutExtension(dialog.FileName);
-                Plan_TotalLayer = MultislitControl.CurrentSession.GetTotalPlanLayerCount;
-                CurrentLayer = 0;
-                Is_PlanFileLoaded = true;
-            }
-            else
-            {
-                Trace.WriteLine("");
-                PatientID = "Fail";
-                PatientName = "Fail";
-                Trace.WriteLine("Plan_NCC File = null");
-                Trace.WriteLine("");
-            }
+            
         }
 
         private string planFileName = "";

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace PG.Orm
 {
-    internal class SessionInfo
+    public class SessionInfo
     {
         [Key]
         [Column("session_id")]
