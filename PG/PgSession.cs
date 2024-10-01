@@ -106,46 +106,21 @@ namespace PG
             SessionMessage = "Session Type: " + SessionType.ToString();
             Status = eSessionStatus.Ready;
         }
-
         public void StartSession()
         {
-            
-        }
-        private void UpdateSessionInfoToDb()
-        {
-            // update session info to db
-        }
-        private bool RunMatlabAnalysis()
-        {
-            return true;
+            CruxellWrapper.StartFpgaDaq(this.SessionFolder + "/fpga_data.bin");
         }
 
-        private bool ConnectNccFtpServer()
-        {
-
-            return true;
-        }
-        private bool RunFpgaDaq()
-        {
-            return true;
-        }
-
-        private async Task UpdateFpgaToDb()
-        {
-            // update fpga data to db
-        }
-
-        private async Task UpdateNccToDb()
-        {
-            // update ncc data to db
-        }
-        
         public void StopSession()
         {
-            SessionMessage = "Session Stopped";
-            SessionEndTime = DateTime.Now;
             Status = eSessionStatus.Stopped;
-            UpdateSessionInfoToDb();
+            SessionEndTime = DateTime.Now;
+            SessionMessage = "Session Stopped";
+        }
+        
+        public static PgSession GetSessionFromFolder(string folderDir)
+        {
+            throw new NotImplementedException ();
         }
     }
 }

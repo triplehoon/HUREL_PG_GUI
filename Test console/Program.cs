@@ -24,11 +24,11 @@ class TestClass
     }
     private static void TestFpgaDaq()
     {
-        CruxellWrapper.StartFpgaDaq();
+        CruxellWrapper.StartFpgaDaq(@"C:\HUREL");
         // wait for 30 seconds for every 100 ms
         Console.WriteLine("Start reading data from FPGA");
         DaqData daqData;
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i < 200; i++)
         {
             
             if (CruxellWrapper.GetDataCount() != 0)
@@ -179,9 +179,8 @@ class TestClass
 
     }
     static void Main(string[] args)
-    {      
-        ReadLogData();
-       
+    {
+        TestFpgaDaq();
     }
 
 }

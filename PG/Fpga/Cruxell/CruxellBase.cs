@@ -211,6 +211,7 @@ namespace PG.Fpga.Cruxell
         public TextBoxReplica txt_setting_sleep_time = new TextBoxReplica("txt_setting_sleep_time");
 
         public TextBoxReplica TB_file_name = new TextBoxReplica("TB_file_name");
+        public string? customFilePath;
 
         public ButtonReplica StartBtn = new ButtonReplica("StartBtn");
 
@@ -1532,6 +1533,12 @@ namespace PG.Fpga.Cruxell
 
         private void init_file_save_bin()
         {
+            if (this.customFilePath != null)
+            {                
+                this.file_main_path = this.customFilePath;
+
+                return;
+            }
             // .bin 저장을 위한 경로
             string file_path = Application.StartupPath + "\\" + TB_file_name.Text;
             DirectoryInfo di = new DirectoryInfo(file_path);

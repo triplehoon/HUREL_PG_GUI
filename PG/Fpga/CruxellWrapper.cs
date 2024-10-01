@@ -22,21 +22,30 @@ namespace PG.Fpga
             }
             return false;
         }
-        public static void StartFpgaDaq(string fileName = "")
+        public static void StartFpgaDaq(string fileDir = "")
         {
             if (CruxellBase.bRunning)
             {
                 Trace.WriteLine("FpgaDaq is already running");
                 return;
             }
-            if (fileName == "")
+            if (fileDir == "")
             {
                 // filename as YYYYMMDD_HHMMSS
-                fileName = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                fileName += "_binary";
+                fileDir = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                fileDir += "_binary";
+            }
+            else
+            {
+                
+                string rawFileName = "raw_data_" + DateTime.Now.ToString("yyyyMMdd_HHmmss"); ;
+                // check file name exist
+                string filePath = fileDir + "/" + rawFileName + ".bin";              
+                CruxellBase.customFilePath = filePath;
             }
             Trace.WriteLine("FpgaDaq Start");
-            CruxellBase.TB_file_name.Text = fileName;
+            CruxellBase.TB_file_name.Text = fileDir;
+            
             CruxellBase.start_stop_usb();
         }
 
