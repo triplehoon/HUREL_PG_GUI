@@ -15,7 +15,7 @@
     public abstract class Layer
     {
         public int LayerNumber { get; protected set; }
-        public string? LayerId { get; protected set; }
+        abstract public string? LayerId { get;}
         public double LayerEnergy { get; protected set; }
 
         public virtual string PrintLayerInfo()

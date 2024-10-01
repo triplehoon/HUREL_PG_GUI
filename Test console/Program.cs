@@ -84,29 +84,23 @@ class TestClass
         CruxellWrapper.TestWriteData();
         Console.WriteLine("Done");
     }
-    static void TestSessionCreation()
-    {
-    }
     static void TestCreateConnectionWithDb()
     {
-
-    }
-    static void Main(string[] args)
-    {      
         // Set up the dependency injection container
         var serviceCollection = new ServiceCollection();
         serviceCollection.AddDbContext<PgDbContext>();
 
         // Build the service provider and use it
         var serviceProvider = serviceCollection.BuildServiceProvider();
-       
+
         // Resolve the DbContext and use it
         using (PgDbContext dbContext = serviceProvider.GetRequiredService<PgDbContext>())
         {
             // read session data
-            SessionInfo session = dbContext.SessionInfos.FirstOrDefault();
+            SessionInfo? session = dbContext.SessionInfos.FirstOrDefault();
             // print session data
-            if (session != null) {
+            if (session != null)
+            {
                 Console.WriteLine("Session ID: " + session.SessionId);
                 Console.WriteLine("Session Name: " + session.PatientNumber);
                 Console.WriteLine("Session Description: " + session.Date);
@@ -120,6 +114,74 @@ class TestClass
         //TestFpgaDaq();
 
         serviceProvider.Dispose();
+    }
+
+    static void ReadLogData()
+    {
+        // log folder set C:\HUREL\PG\MultiSlit\TestLog\59120_230822
+        string logFolder = @"C:\HUREL\PG\MultiSlit\TestLog\59120_230822";
+
+        List<string> files = Directory.GetFiles(logFolder).ToList();
+       
+        string? idtFile = files.Find(x => x.Contains("idt_config"));
+
+        if (idtFile != null)
+        {
+            Console.WriteLine("IDT file: " + idtFile);
+        }
+        else
+        {
+            Console.WriteLine("IDT file is not found");
+        }
+
+
+        // read log data
+        NccLogParameter logParameter = Ncc.GetNccLogParameter(idtFile);
+
+        // print log data
+        Console.WriteLine("Log data");
+        // coefficient
+        Console.WriteLine("Coefficient: " + logParameter.coeff_x + ", " + logParameter.coeff_y);
+
+        // read map record and specific record
+        List<NccLayer> layers = new List<NccLayer>();
+        foreach (string file in files)
+        {
+            if (file.Contains("map_record") && file.Contains("xdr"))
+            {
+                // find specific xdr change record to specif
+                string specifFile = file.Replace("map_record", "map_specif");
+                Console.WriteLine("Map record: " + file);
+                Console.WriteLine("Map specif: " + specifFile);
+
+                NccLayer nccLayer = new NccLayer(file, specifFile, logParameter.coeff_x, logParameter.coeff_y);
+
+
+                layers.Add(nccLayer);
+            }
+        }
+
+        layers.Sort(Ncc.SortLayer);
+
+        // print layer data
+        foreach (NccLayer item in layers)
+        {
+            Console.WriteLine(item);
+        }
+        foreach (NccLayer item in layers)
+        {
+            foreach (NccLogSpot spot in item.LogSpots)
+            {
+
+               Console.WriteLine(spot);
+            }
+        }
+
+    }
+    static void Main(string[] args)
+    {      
+        ReadLogData();
+       
     }
 
 }
