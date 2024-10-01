@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Input;
-using HUREL.PG.Ncc;
+using HUREL.PG.NccHelper;
 using System.Collections.Concurrent;
 using System.Windows.Media;
 using PG.Fpga;

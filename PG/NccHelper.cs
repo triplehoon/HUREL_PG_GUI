@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using CenterSpace.NMath.Core;
 
-namespace HUREL.PG.Ncc
+namespace HUREL.PG.NccHelper
 {   
     public enum NccBeamState
     {

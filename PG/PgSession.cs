@@ -27,7 +27,8 @@ namespace PG
             Running,
             Paused,
             Stopped,
-            Completed
+            Completed,
+            FpgaError
         }
         public eSessionType SessionType { get; private set; }
         public List<string> SessionLog { get; private set; }
@@ -108,14 +109,39 @@ namespace PG
         }
         public void StartSession()
         {
-            CruxellWrapper.StartFpgaDaq(this.SessionFolder + "/fpga_data.bin");
+            Status = eSessionStatus.Running;
+            SessionStartTime = DateTime.UtcNow;
+            SessionMessage = "Session Started";
+            CruxellWrapper.StartFpgaDaq(this.SessionFolder);
+            
+            while (CruxellWrapper.GetDataCount() == 0)
+            {
+                if (CruxellWrapper.GetDataCount() > 0)
+                {
+                    SessionMessage = "FPGA: Data Received";
+                    
+                    break;
+                }
+
+                if (DateTime.UtcNow - SessionStartTime > TimeSpan.FromSeconds(60))
+                {
+                    SessionMessage = "FPGA: No Data Received";
+                    Status = eSessionStatus.FpgaError;
+                    return;                    
+                }
+
+                Task.Delay(100).Wait();
+            }
+
+            // update default session info to db
         }
 
         public void StopSession()
         {
             Status = eSessionStatus.Stopped;
-            SessionEndTime = DateTime.Now;
+            SessionEndTime = DateTime.UtcNow;
             SessionMessage = "Session Stopped";
+            CruxellWrapper.StopFpgaDaq();
         }
         
         public static PgSession GetSessionFromFolder(string folderDir)

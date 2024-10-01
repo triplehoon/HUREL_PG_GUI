@@ -1,5 +1,5 @@
 ﻿using HUREL.PG;
-using HUREL.PG.Ncc;
+using HUREL.PG.NccHelper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;

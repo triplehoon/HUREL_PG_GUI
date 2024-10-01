@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using WinSCP;
 using System.Threading;
 
-namespace HUREL.PG.Ncc
+namespace HUREL.PG.NccHelper
 {
     public static class LogFileSync
     {
@@ -69,7 +69,7 @@ namespace HUREL.PG.Ncc
 
         }
         
-        public static async Task SyncAndDownloadLogFile(string localPath, bool testMode = false)
+        public static async Task SyncAndDownloadLogFile(string localDirectory, bool testMode = false)
         {
 
 
@@ -129,7 +129,7 @@ namespace HUREL.PG.Ncc
                                 }
                                 if (!isExistAndUnchanged)
                                 {
-                                    ftpSession.GetFileToDirectory(file.FullName, localPath);
+                                    ftpSession.GetFileToDirectory(file.FullName, localDirectory);
                                     NewLogFileReceived?.Invoke(file.Name);
                                     checkedRemoteFiles.Add(file);
                                 }

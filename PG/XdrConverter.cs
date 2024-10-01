@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HUREL.PG.Ncc
+namespace HUREL.PG.NccHelper
 {
     //public class XdrDataRecorderRpcLayerConverter
     public class XdrConverter_Record
