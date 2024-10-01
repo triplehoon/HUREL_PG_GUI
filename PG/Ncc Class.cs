@@ -256,9 +256,6 @@ namespace HUREL.PG.Ncc
             }
         }
 
-        public NccLayer()
-        {
-        }
         #region Properties
         private List<NccSpot> spots;
         public List<NccSpot> Spots
@@ -970,9 +967,6 @@ namespace HUREL.PG.Ncc
 
             Layers.Add(loadedLayer);
             Layers.Sort(SortLayer);
-
-
-
             return true;
         }
         public bool LoadPgFile(string pgDir)

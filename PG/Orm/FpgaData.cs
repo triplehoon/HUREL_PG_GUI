@@ -26,10 +26,10 @@ namespace PG.Orm
         public double SignalValueMv { get; set; }
 
         // Foreign Key
-        [ForeignKey("SessionInfoOrm")]
-        [Column("SessionInfoOrm_id")]
-        public string SessionId { get; set; }
+        [ForeignKey("SessionInfo")]
+        [Column("SessionInfo_id")]
+        public string SessionInfoId { get; set; }
 
-        public Session Session { get; set; }  // Navigation property
+        public SessionInfo SessionInfo { get; set; }  // Should refer to SessionInfo, not Session
     }
 }

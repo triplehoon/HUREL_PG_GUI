@@ -16,9 +16,12 @@ using System.Windows.Input;
 using HUREL.PG.Ncc;
 using System.Collections.Concurrent;
 using System.Windows.Media;
+using PG.Fpga;
+using System.Net.NetworkInformation;
 
 namespace HUREL_PG_GUI.ViewModels
 {
+
     public class VM_SpotScanning : ViewModelBase
     {
 
@@ -87,6 +90,33 @@ namespace HUREL_PG_GUI.ViewModels
             }
         }
 
+
+        private bool fpgaStatus = CruxellWrapper.GetFpgaStatus();
+        public bool FpgaStatus
+        {
+            get
+            {
+                return fpgaStatus;
+            }
+            set
+            {
+                fpgaStatus = value;
+                OnPropertyChanged(nameof(FpgaStatus));
+            }
+        }
+        private string fpgaStatusStr = "";
+        public string FpgaStatusStr
+        {
+            get
+            {
+                return fpgaStatusStr;
+            }
+            set
+            {
+                fpgaStatusStr = value; 
+                OnPropertyChanged(nameof(FpgaStatusStr));
+            }
+        }
 
         private string vmStatus;
         public string VMStatus
@@ -270,6 +300,40 @@ namespace HUREL_PG_GUI.ViewModels
         #endregion
 
         #region Command
+        // SH edit make Stop command
+
+        private AsyncCommand _MonitoringStopCommand;
+        public ICommand MonitoringStopCommand
+        {
+            get
+            {
+                return _MonitoringStopCommand ?? (_MonitoringStopCommand = new AsyncCommand(MonitoringStop));
+            }
+        }
+
+        private async Task MonitoringStop()
+        {
+            if (IsMonitoring)
+            {
+                IsMonitoring = false;
+
+                CruxellWrapper.StopFpgaDaq();
+            }
+            else
+            {
+                IsMonitoring = false;
+            }
+        }
+
+        private async Task StartFpgaDaqAsync()
+        {
+            await Task.Run(() => CruxellWrapper.StartFpgaDaq());
+        }
+
+        public ICommand StartFpgaDaqCommand => new AsyncCommand(StartFpgaDaqAsync);
+
+
+        // Sh edit end make Stop command
         private AsyncCommand _MonitoringStartCommand;
         public ICommand MonitoringStartCommand
         {
@@ -278,41 +342,73 @@ namespace HUREL_PG_GUI.ViewModels
                 return _MonitoringStartCommand ?? (_MonitoringStartCommand = new AsyncCommand(MonitoringStart));
             }
         }
+
+
         private async Task MonitoringStart()
         {
-            if (true)
+
+            // hold the thread by 20 seconds
+            if (!IsMonitoring)
             {
                 IsMonitoring = true;
-                Task drawing = DrawSpotMap();
+
                 CruxellWrapper.StartFpgaDaq();
- 
+
+                Task drawing = DrawSpotMap();
+
                 await drawing;
             }
             else
             {
                 IsMonitoring = false;
-                
+
             }
         }
 
         Mutex loopMutex = new Mutex(false, "loop mutex");
         private async Task DrawSpotMap()
         {
-            while(isMonitoring)
+            while (isMonitoring)
             {
                 await Task.Delay(100);
-
-                List<NccLayer> layers = new List<NccLayer>();
-                List<SpotMap> spotMaps = new List<SpotMap>();
-                await Task.Run(() => { spotMaps = NccLayer.GetSpotMap(layers); });
-                for (int i = 0; i < spotMaps.Count; i++)
+                string fpgaStatus = "";
+                fpgaStatus += "Data count: " + CruxellWrapper.GetDataCount().ToString("N0") + "\n";
+                fpgaStatus += "Sample data: " + "\n";
+                if (CruxellWrapper.GetDataCount() > 0)
                 {
-                    VM_SpotMap.Add(new SpotMapDrawing(spotMaps[i].X, spotMaps[i].Y, spotMaps[i].MU, SetColor(spotMaps[i].RangeDifference, -10, 10)));
+                    DaqData daqData = CruxellWrapper.GetDaqData()[CruxellWrapper.GetDataCount() - 1];
+                    fpgaStatus += "secTime: " + daqData.secTime.ToString("N0") + "\n";
+                    //fpgaStatus +="chNumber: " + daqData.chNumber.ToString("N0")+"\n"
+                    fpgaStatus += "chNumber: " + daqData.chNumber.ToString("D3") + "\n";
+
+                    fpgaStatus += "preData: " + daqData.preData.ToString("N0") + "\n";
+                    fpgaStatus += "vPulseData: " + daqData.vPulseData.ToString("D4") + "\n";
+                    //fpgaStatus +="vPulseData: " + ((int)Math.Round(daqData.vPulseData)).ToString("D4")+"\n"
+
+                    fpgaStatus += "tPulseTime: " + daqData.tPulseTime.ToString("N0") + "\n";
+                    fpgaStatus += "-------Save values-------" + "\n";
+                    fpgaStatus += "channel: " + daqData.channel.ToString("D3") + "\n";
+                    fpgaStatus += "timestamp [ns]: " + daqData.timestamp.ToString("N0") + "\n";
+
+                    fpgaStatus += "value [mV]: " + ((int)Math.Round(daqData.value)).ToString("D4") + "\n";
                 }
-                OnPropertyChanged(nameof(VM_SpotMap));
+
+                FpgaStatusStr = fpgaStatus + "\n";
+
+                //List<NccLayer> layers = new List<NccLayer>();
+                //List<SpotMap> spotMaps = new List<SpotMap>();
+                //await Task.Run(() => { spotMaps = NccLayer.GetSpotMap(layers); });
+                //for (int i = 0; i < spotMaps.Count; i++)
+                //{
+                //    VM_SpotMap.Add(new SpotMapDrawing(spotMaps[i].X, spotMaps[i].Y, spotMaps[i].MU, SetColor(spotMaps[i].RangeDifference, -10, 10)));
+                //}
+                //OnPropertyChanged(nameof(VM_SpotMap));
 
             }
-            
+
+            // when monitoring is stopped
+            FpgaStatusStr += "FPGA Monitoring is stopped\n";
+
         }
         private SolidColorBrush SetColor(double Diff, float min, float max) // 파일로 받아서 작성하도록 수정 필요
         {
@@ -485,7 +581,7 @@ namespace HUREL_PG_GUI.ViewModels
             dialog.Filter = "Pld|*.pld|Text|*.txt|All|*.*";
             dialog.ShowDialog();
             VMStatus = "Loading Plan File";
-            
+
         }
 
         private string planFileName = "";
@@ -613,7 +709,7 @@ namespace HUREL_PG_GUI.ViewModels
         ////////////////////////////////////////////////////////
 
         #region Code/GUI Verificaiton
-        
+
         #endregion
 
 

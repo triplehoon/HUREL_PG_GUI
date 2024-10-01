@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace PG
 {
-    public class PgSession
+    public abstract class PgSession
     {
         private const string MAIN_FOLDER = "C:/HUREL/PG/MultiSlit/Sessions";
         private const string LOG_FILE_NAME = "log.txt";

@@ -15,7 +15,6 @@ namespace PG.Fpga
         //PRE_DATA = typecast(reshape(chunkData(i + 6:i + 7,:), [], 1), 'uint16');
         //V_PULSE_DATA = typecast(reshape(chunkData(i + 10:i + 11,:), [], 1), 'uint16');
         //T_PULSE_TIME = typecast(reshape(chunkData(i + 12:i + 15,:), [], 1), 'uint32');
-
         public readonly UInt32 secTime;
         public readonly UInt16 chNumber;
         public readonly UInt16 preData;

@@ -28,7 +28,7 @@ class TestClass
         // wait for 30 seconds for every 100 ms
         Console.WriteLine("Start reading data from FPGA");
         DaqData daqData;
-        for (int i = 0; i < 300; i++)
+        for (int i = 0; i < 100; i++)
         {
             
             if (CruxellWrapper.GetDataCount() != 0)
@@ -38,14 +38,22 @@ class TestClass
                 Console.WriteLine("Sample data: ");
                 daqData = CruxellWrapper.GetDaqData()[CruxellWrapper.GetDataCount() - 1];
                 Console.WriteLine("secTime: " + daqData.secTime.ToString("N0"));
-                Console.WriteLine("chNumber: " + daqData.chNumber.ToString("N0"));
+                //Console.WriteLine("chNumber: " + daqData.chNumber.ToString("N0"));
+                Console.WriteLine("chNumber: " + daqData.chNumber.ToString("D3"));
+
                 Console.WriteLine("preData: " + daqData.preData.ToString("N0"));
-                Console.WriteLine("vPulseData: " + daqData.vPulseData.ToString("N0"));
+                Console.WriteLine("vPulseData: " + daqData.vPulseData.ToString("D4"));
+                //Console.WriteLine("vPulseData: " + ((int)Math.Round(daqData.vPulseData)).ToString("D4"));
+
                 Console.WriteLine("tPulseTime: " + daqData.tPulseTime.ToString("N0"));
                 Console.WriteLine("-------Save values-------");
-                Console.WriteLine("channel: " + daqData.channel.ToString("N0"));
+                Console.WriteLine("channel: " + daqData.channel.ToString("D3"));
                 Console.WriteLine("timestamp [ns]: " + daqData.timestamp.ToString("N0"));
-                Console.WriteLine("value [mV]: " + daqData.value.ToString("N0"));
+                
+                Console.WriteLine("value [mV]: " + ((int)Math.Round(daqData.value)).ToString("D4"));
+
+                //Console.WriteLine("value [mV]: " + daqData.value.ToString("NO"));
+                //Console.WriteLine("value [mV]: " + Math.Round(daqData.value).ToString("Fo"));
             }
             System.Threading.Thread.Sleep(100);
             // check console is write
@@ -78,7 +86,6 @@ class TestClass
     }
     static void TestSessionCreation()
     {
-        PgSession session = new PgSession(eSessionType.NCC);
     }
     static void TestCreateConnectionWithDb()
     {
@@ -96,8 +103,21 @@ class TestClass
         // Resolve the DbContext and use it
         using (PgDbContext dbContext = serviceProvider.GetRequiredService<PgDbContext>())
         {
-           
+            // read session data
+            SessionInfo session = dbContext.SessionInfos.FirstOrDefault();
+            // print session data
+            if (session != null) {
+                Console.WriteLine("Session ID: " + session.SessionId);
+                Console.WriteLine("Session Name: " + session.PatientNumber);
+                Console.WriteLine("Session Description: " + session.Date);
+            }
+            else
+            {
+                Console.WriteLine("Session data is empty");
+            }
         }
+
+        //TestFpgaDaq();
 
         serviceProvider.Dispose();
     }

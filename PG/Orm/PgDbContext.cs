@@ -19,7 +19,6 @@ namespace PG.Orm
         }
 
         public DbSet<FpgaData> RawDataList { get; set; }
-        public DbSet<NccLogData> NccLogDataList { get; set; }
         public DbSet<SessionInfo> SessionInfos { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -30,8 +29,16 @@ namespace PG.Orm
                 {
                     throw new Exception("DbConnectionString is not set in App.config");
                 }
-                optionsBuilder.UseSqlServer(dbConnectionString);
+                optionsBuilder.UseNpgsql(dbConnectionString);
             }
+        }
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            // mapping for SessionInfo table set table name
+            modelBuilder.Entity<SessionInfo>().ToTable("sessioninfo");
+            // mapping for FpgaData table set table name
+            modelBuilder.Entity<FpgaData>().ToTable("fpgadata");
         }
     }
 }

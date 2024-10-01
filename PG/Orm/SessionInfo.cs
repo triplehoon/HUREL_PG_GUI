@@ -19,7 +19,7 @@ namespace PG.Orm
 
         [Column("date")]
         public DateTime Date { get; set; }  // 날짜
-        [Column("IsRunning")]
+        [Column("is_running")]
         public bool IsRunning { get; set; }
     }
 }

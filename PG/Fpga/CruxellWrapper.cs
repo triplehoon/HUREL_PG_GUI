@@ -13,6 +13,15 @@ namespace PG.Fpga
     {
         private static bool IsFirstTime = true;
         private static CruxellBase CruxellBase = new CruxellBase();
+
+        public static bool GetFpgaStatus()
+        {
+            if( CruxellBase.EndPointsComboBox.Items.Count > 0 )
+            {
+                return true;
+            }
+            return false;
+        }
         public static void StartFpgaDaq(string fileName = "")
         {
             if (CruxellBase.bRunning)
