@@ -284,6 +284,7 @@ namespace HUREL_PG_GUI.ViewModels
             {
                 IsMonitoring = true;
                 Task drawing = DrawSpotMap();
+                CruxellWrapper.StartFpgaDaq();
  
                 await drawing;
             }
