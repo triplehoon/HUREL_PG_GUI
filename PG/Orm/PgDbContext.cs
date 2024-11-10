@@ -18,7 +18,7 @@ namespace PG.Orm
         {
         }
 
-        public DbSet<FpgaData> RawDataList { get; set; }
+        public DbSet<FpgaData> FpgaDbData { get; set; }
         public DbSet<SessionInfo> SessionInfos { get; set; }
         public DbSet<SessionAggSpots> SessionAggSpots { get; set; }
         public DbSet<SessionLogSpots> SessionLogSpots { get; set; }

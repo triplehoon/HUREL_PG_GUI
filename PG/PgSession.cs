@@ -140,7 +140,7 @@ namespace PG
 
         }
 
-        private CancellationToken sessionCancelToken = new CancellationToken();
+        private CancellationTokenSource sessionCancelToken = new CancellationTokenSource();
         public virtual void StartSession()
         {
             Status = eSessionStatus.Running;
@@ -166,7 +166,7 @@ namespace PG
 
                 Task.Delay(100).Wait();
             }
-            sessionCancelToken = new CancellationToken();
+            sessionCancelToken = new CancellationTokenSource();
             // update default session info to db
         }
         // Task to run in the background
@@ -180,15 +180,23 @@ namespace PG
             while (!cancellationToken.IsCancellationRequested)
             {
                 List<DaqData> daqDatas = CruxellWrapper.GetDaqData();
-
+                
                 if (daqDatas.Count > FpgaRawData.Count)
                 {
                     for (int i = FpgaRawData.Count; i < daqDatas.Count; ++i)
                     {
                         FpgaRawData.Add(daqDatas[i]);
+                        FpgaData fpgaData = new FpgaData();
+                        fpgaData.Channel = daqDatas[i].channel;
+                        fpgaData.TimestampNs = daqDatas[i].timestamp;
+                        fpgaData.SignalValueMv = daqDatas[i].value;
+                        fpgaData.SessionInfo = SessionInfo;
+                        PgDbContext.FpgaDbData.Add(fpgaData);
                     }
                 }
 
+                // update db
+                PgDbContext.SaveChanges();
 
                 await Task.Delay(100);
             }
@@ -199,6 +207,7 @@ namespace PG
             SessionEndTime = DateTime.UtcNow;
             SessionMessage = "Session Stopped";
             CruxellWrapper.StopFpgaDaq();
+            sessionCancelToken.Cancel();
         }
         
         public static PgSession GetSessionFromFolder(string folderDir)

@@ -1,7 +1,10 @@
 ﻿using HUREL.PG;
 using HUREL.PG.NccHelper;
+using PG.Fpga;
+using PG.Orm;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -155,11 +158,11 @@ namespace PG
 
             if (idtFile != null)
             {
-                Console.WriteLine("IDT file: " + idtFile);
+                Debug.WriteLine("IDT file: " + idtFile);
             }
             else
             {
-                Console.WriteLine("IDT file is not found");
+                Debug.WriteLine("IDT file is not found");
             }
 
 
@@ -167,9 +170,9 @@ namespace PG
             NccLogParameter logParameter = Ncc.GetNccLogParameter(idtFile);
 
             // print log data
-            Console.WriteLine("Log data");
+            Debug.WriteLine("Log data");
             // coefficient
-            Console.WriteLine("Coefficient: " + logParameter.coeff_x + ", " + logParameter.coeff_y);
+            Debug.WriteLine("Coefficient: " + logParameter.coeff_x + ", " + logParameter.coeff_y);
 
             // read map record and specific record
             List<NccLayer> layers = new List<NccLayer>();
@@ -179,8 +182,8 @@ namespace PG
                 {
                     // find specific xdr change record to specif
                     string specifFile = file.Replace("map_record", "map_specif");
-                    Console.WriteLine("Map record: " + file);
-                    Console.WriteLine("Map specif: " + specifFile);
+                    Debug.WriteLine("Map record: " + file);
+                    Debug.WriteLine("Map specif: " + specifFile);
 
                     NccLayer nccLayer = new NccLayer(file, specifFile, logParameter.coeff_x, logParameter.coeff_y);
 
@@ -193,9 +196,30 @@ namespace PG
             NccLayers = layers;
         }
 
-        public void StartSession()
+        private async Task UpdateLogDataToDb(CancellationToken cancellationToken)
         {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                int spotCount = 0;
+                for (int i = 0; i < NccLayers.Count; i++)
+                {
+                    NccLayer nccLayer = NccLayers[i];
+                    // update db
+                    for (int j = 0; j < nccLayer.LogSpots.Count; j++)
+                    {
+                        spotCount++;
+                        NccLogSpot spot = nccLayer.LogSpots[j];
+                        // update db
+                        if (PgDbContext.SessionLogSpots)
+                    }
+                }
 
+                // update db
+                PgDbContext.SaveChanges();
+
+                await Task.Delay(100);
+            }
         }
+
     }
 }
