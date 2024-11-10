@@ -1,4 +1,5 @@
-﻿using PG.Fpga;
+﻿using Microsoft.EntityFrameworkCore;
+using PG.Fpga;
 using PG.Orm;
 using System;
 using System.Collections.Generic;
@@ -72,10 +73,10 @@ namespace PG
         public DateTime? SessionEndTime { get; private set; }
         public string PatientId { get; private set; }
         public List<DaqData> FpgaRawData { get; private set; }
-        public SessionInfo? SessionInfo { get; private set; }
         public PgDbContext PgDbContext { get; private set; }
-
-
+        public SessionInfo? SessionInfo { get; private set; }
+        public List<FpgaData> FpgaDbData { get; set; } = new List<FpgaData>();
+        public List<SessionAggSpots> SessionAggSpots { get; set; } = new List<SessionAggSpots>();
 
         public PgSession(eSessionType sessionType, 
                          string patientId, 
@@ -141,7 +142,7 @@ namespace PG
         }
 
         private CancellationTokenSource sessionCancelToken = new CancellationTokenSource();
-        public virtual void StartSession()
+        public void StartSession()
         {
             Status = eSessionStatus.Running;
             SessionStartTime = DateTime.UtcNow;
@@ -191,23 +192,41 @@ namespace PG
                         fpgaData.TimestampNs = daqDatas[i].timestamp;
                         fpgaData.SignalValueMv = daqDatas[i].value;
                         fpgaData.SessionInfo = SessionInfo;
-                        PgDbContext.FpgaDbData.Add(fpgaData);
+                        this.FpgaDbData.Add(fpgaData);
                     }
                 }
-
-                // update db
-                PgDbContext.SaveChanges();
 
                 await Task.Delay(100);
             }
         }
-        public virtual void StopSession()
+        public void StopSession()
         {
             Status = eSessionStatus.Stopped;
             SessionEndTime = DateTime.UtcNow;
             SessionMessage = "Session Stopped";
             CruxellWrapper.StopFpgaDaq();
             sessionCancelToken.Cancel();
+        }
+
+        public virtual void UpdateDbContext()
+        {
+            if (SessionInfo == null)
+            {
+                return;
+            }
+            // update session info
+            if (Status == eSessionStatus.Stopped)
+            {
+                SessionInfo.IsRunning = false;
+            }
+            PgDbContext.Update(SessionInfo);
+            PgDbContext.Update(FpgaDbData);
+
+            // get agg spots from db with session id is same as this session id
+            List<SessionAggSpots> sessionAggSpots = PgDbContext.SessionAggSpots.Where(s => s.SessionInfoId == SessionInfo.SessionId).ToList();
+
+
+            
         }
         
         public static PgSession GetSessionFromFolder(string folderDir)

@@ -11,8 +11,10 @@ CREATE TABLE SessionInfo (
 
 -- Create SessionLogSpots table
 CREATE TABLE SessionLogSpots (
-    id INT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,  -- Changed to SERIAL for auto-increment
     session_id VARCHAR(50),
+    start_time TIMESTAMP,
+    end_time TIMESTAMP,
     spot_sequence_number INT,
     layer_index INT,
     is_tunning BOOLEAN DEFAULT FALSE,
@@ -25,7 +27,7 @@ CREATE TABLE SessionLogSpots (
 
 -- Create SessionAggSpots table
 CREATE TABLE SessionAggSpots (
-    id INT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,  -- Changed to SERIAL for auto-increment
     session_id VARCHAR(50),
     log_spot_id INT,
     plan_layer_index INT,
@@ -40,3 +42,16 @@ CREATE TABLE SessionAggSpots (
     FOREIGN KEY (session_id) REFERENCES SessionInfo(session_id),
     FOREIGN KEY (log_spot_id) REFERENCES SessionLogSpots(id)
 );
+
+CREATE TABLE FpgaData (
+    id SERIAL PRIMARY KEY,
+    channel INT NOT NULL,
+    timestamp_ns BIGINT NOT NULL,
+    signal_value_mv DOUBLE PRECISION NOT NULL,
+    SessionInfo_id VARCHAR(255),  -- Adjust size if needed to match the FK type
+
+    CONSTRAINT FK_FpgaData_SessionInfo FOREIGN KEY (SessionInfo_id)
+        REFERENCES SessionInfo(session_id) ON DELETE NO ACTION
+);
+
+CREATE INDEX IX_FpgaData_SessionInfo_id ON FpgaData (SessionInfo_id);

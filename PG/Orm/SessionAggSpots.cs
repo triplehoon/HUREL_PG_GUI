@@ -23,7 +23,7 @@ namespace PG.Orm
         public SessionInfo? SessionInfo { get; set; }
 
         // Foreign key for SessionLogSpots
-        [ForeignKey("LogSpotId")]
+        [ForeignKey("SessionLogSpots")]
         [Column("log_spot_id")]
         public int LogSpotId { get; set; }
         public SessionLogSpots? SessionLogSpots { get; set; }

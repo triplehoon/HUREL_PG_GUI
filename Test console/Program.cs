@@ -179,7 +179,7 @@ class TestClass
 
     }
     // Test NccPgSession
-    static void TestNccPgSession()
+    static async void TestNccPgSession()
     {
         // create NccPgSession
         NccPgSession nccPgSession = new NccPgSession(patientId: "JohnDoe",
@@ -188,13 +188,39 @@ class TestClass
                                                      pldPath: @"C:\HUREL\PG\MultiSlit\TestLog\data\PLD_1C_ASO.pld",
                                                      pld3dPath: @"C:\HUREL\PG\MultiSlit\TestLog\data\3DplotRange1C_ASO.pld");
 
-        nccPgSession.StartFtpStream(true);
+        nccPgSession.StartSession();
+        nccPgSession.StartFtpStream("logs", true);
+        CancellationTokenSource tokenSource = new CancellationTokenSource();
 
-        // wait for key press
-        Console.WriteLine("Press any key to stop the session");
-        Console.ReadKey();
-        Console.WriteLine("Stop the session");
+        Task task = Task.Run(() =>
+        {
+            nccPgSession.UpdateLogData(tokenSource.Token);
+        });
+        while (true)
+        {
+            // the x key is pressed
+            if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.X)
+            {
+                tokenSource.Cancel();
+                await task;
+                break;
+            }
+
+            // write ncc pg session info to console
+            Console.WriteLine(nccPgSession);
+            Console.WriteLine("Log data count: " + nccPgSession.SessionLogSpots.Count);
+            if (nccPgSession.SessionLogSpots.Count > 0)
+            {
+                Console.WriteLine("Log data: " + nccPgSession.SessionLogSpots.Last().ToString());
+            }
+
+
+            nccPgSession.UpdateDbContext();
+
+            System.Threading.Thread.Sleep(100);
+        }
         nccPgSession.StopFtpStream();
+        nccPgSession.StopSession();
     }
     static void Main(string[] args)
     {

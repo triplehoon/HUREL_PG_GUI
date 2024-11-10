@@ -76,7 +76,7 @@ namespace HUREL.PG.NccHelper
 
         public static async Task SyncAndDownloadLogFile(
             string localDirectory,
-            string remoteDirectory = "/PBSdata/test/clinical/tr3/planId/beamId/fractionId")
+            string remoteDirectory)
         {
 
 
@@ -145,7 +145,10 @@ namespace HUREL.PG.NccHelper
                     {
                         Trace.WriteLine(ex.ToString());
                         Thread.Sleep(1);
-
+                        if (ftpSession != null)
+                        {
+                            ftpSession.Close();
+                        }
                         // check scp session
                         if (ftpSession != null && !ftpSession.Opened)
                         {

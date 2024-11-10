@@ -1,5 +1,6 @@
 ﻿using HUREL.PG;
 using HUREL.PG.NccHelper;
+using Microsoft.EntityFrameworkCore;
 using PG.Fpga;
 using PG.Orm;
 using System;
@@ -13,6 +14,8 @@ namespace PG
 {
     public class NccPgSession : PgSession
     {
+        public List<SessionLogSpots> SessionLogSpots { get; set; } = new List<SessionLogSpots>();
+
         public NccPgSession(string patientId, 
                          string sessionDescription,
                          string calibrationFilePath,
@@ -87,7 +90,7 @@ namespace PG
         }
         private Task? ftpStreamTask = null;
         // Start log session
-        private void StartFtpStream(bool isTest)
+        public void StartFtpStream(string? remoteDirectory = null, bool isTest = false)
         {
             if (ftpStreamTask != null)
             {
@@ -120,19 +123,30 @@ namespace PG
             System.IO.Directory.CreateDirectory(nccLogFolder);
 
             if (isTest)
-            {
+            {   
+                // set remote directory if is null
+                if (remoteDirectory == null)
+                {
+                    remoteDirectory = "logs";
+                }
                 ftpStreamTask = NccFtp.SyncAndDownloadLogFile(
                     localDirectory: nccLogFolder,
-                    remoteDirectory: "logs");
+                    remoteDirectory: remoteDirectory);
             }
             else
             {
+                if (remoteDirectory == null)
+                {
+                    remoteDirectory = "/PBSdata/test/clinical/tr3/planId/beamId/fractionId";
+                }
                 ftpStreamTask = NccFtp.SyncAndDownloadLogFile(
-                    localDirectory: nccLogFolder);
+                    localDirectory: nccLogFolder,
+                    remoteDirectory: remoteDirectory
+                 );
             }
         }
         // Stop log session
-        private void StopFtpStream()
+        public void StopFtpStream()
         {
             if (ftpStreamTask == null)
             {
@@ -147,7 +161,7 @@ namespace PG
         }
 
         public List<NccLayer> NccLayers = new List<NccLayer>();
-        private void ReadLogTask()
+        private void ReadLog()
         {
             // read log data
             string logFolder = SessionFolder + "/ncc_log";
@@ -158,11 +172,12 @@ namespace PG
 
             if (idtFile != null)
             {
-                Debug.WriteLine("IDT file: " + idtFile);
+                //Debug.WriteLine("IDT file: " + idtFile);
             }
             else
             {
                 Debug.WriteLine("IDT file is not found");
+                return; 
             }
 
 
@@ -170,9 +185,9 @@ namespace PG
             NccLogParameter logParameter = Ncc.GetNccLogParameter(idtFile);
 
             // print log data
-            Debug.WriteLine("Log data");
+            //Debug.WriteLine("Log data");
             // coefficient
-            Debug.WriteLine("Coefficient: " + logParameter.coeff_x + ", " + logParameter.coeff_y);
+            //Debug.WriteLine("Coefficient: " + logParameter.coeff_x + ", " + logParameter.coeff_y);
 
             // read map record and specific record
             List<NccLayer> layers = new List<NccLayer>();
@@ -182,8 +197,19 @@ namespace PG
                 {
                     // find specific xdr change record to specif
                     string specifFile = file.Replace("map_record", "map_specif");
-                    Debug.WriteLine("Map record: " + file);
-                    Debug.WriteLine("Map specif: " + specifFile);
+                    //Debug.WriteLine("Map record: " + file);
+                    //Debug.WriteLine("Map specif: " + specifFile);
+                    // check file exists
+                    if (!System.IO.File.Exists(specifFile))
+                    {
+                        Debug.WriteLine("Map specif file does not exist");
+                        continue;
+                    }
+                    if (!System.IO.File.Exists(file))
+                    {
+                        Debug.WriteLine("Map record file does not exist");
+                        continue;
+                    }
 
                     NccLayer nccLayer = new NccLayer(file, specifFile, logParameter.coeff_x, logParameter.coeff_y);
 
@@ -196,10 +222,12 @@ namespace PG
             NccLayers = layers;
         }
 
-        private async Task UpdateLogDataToDb(CancellationToken cancellationToken)
+        public void UpdateLogData(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
+                ReadLog();
+                // get log data with SessionInfoId
                 int spotCount = 0;
                 for (int i = 0; i < NccLayers.Count; i++)
                 {
@@ -207,18 +235,85 @@ namespace PG
                     // update db
                     for (int j = 0; j < nccLayer.LogSpots.Count; j++)
                     {
-                        spotCount++;
                         NccLogSpot spot = nccLayer.LogSpots[j];
-                        // update db
-                        if (PgDbContext.SessionLogSpots)
+                        if (spotCount < SessionLogSpots.Count)
+                        {
+                            SessionLogSpots[spotCount].SpotSequenceNumber = spotCount;
+                            SessionLogSpots[spotCount].LayerIndex = nccLayer.LayerNumber;
+                            SessionLogSpots[spotCount].StartTime = spot.StartTime;
+                            SessionLogSpots[spotCount].EndTime = spot.EndTime;
+                            if (spot.State == NccBeamState.Tuning)
+                            {
+                                SessionLogSpots[spotCount].IsTunning = true;
+                            }
+                            else
+                            {
+                                SessionLogSpots[spotCount].IsTunning = false;
+                            }
+                            SessionLogSpots[spotCount].PartIndex = nccLayer.PartNumber;
+                            if (spot.State == NccBeamState.Resume)
+                            {
+                                SessionLogSpots[spotCount].ResumeIndex = nccLayer.BeamStateNumber;
+                            }
+                            else
+                            {
+                                SessionLogSpots[spotCount].ResumeIndex = 0;
+                            }
+                            SessionLogSpots[spotCount].PositionX = spot.XPosition;
+                            SessionLogSpots[spotCount].PositionY = spot.YPosition;
+                        }
+                        else
+                        {
+                            SessionLogSpots.Add(new Orm.SessionLogSpots()
+                            {
+                                SessionInfo = SessionInfo,
+                                SpotSequenceNumber = spotCount,
+                                LayerIndex = nccLayer.LayerNumber,
+                                StartTime = spot.StartTime,
+                                EndTime = spot.EndTime,
+                                IsTunning = spot.State == NccBeamState.Tuning,
+                                PartIndex = nccLayer.PartNumber,
+                                ResumeIndex = spot.State == NccBeamState.Resume ? nccLayer.BeamStateNumber : 0,
+                                PositionX = spot.XPosition,
+                                PositionY = spot.YPosition
+                            }
+                            );
+                        }
+                        spotCount++;
                     }
                 }
-
-                // update db
-                PgDbContext.SaveChanges();
-
-                await Task.Delay(100);
             }
+        }
+
+        public new void UpdateDbContext()
+        {
+            if (SessionInfo == null)
+            {
+                return;
+            }
+            // update session info
+            if (Status == eSessionStatus.Stopped)
+            {
+                SessionInfo.IsRunning = false;
+            }
+            PgDbContext.Update(SessionInfo);
+
+            int logSpotCount = SessionLogSpots.Count;
+            int fpgaDataCount = FpgaDbData.Count;
+            // update log spots and fpga data
+            for (int i = 0; i < logSpotCount; i++)
+            {
+               PgDbContext.Update(SessionLogSpots[i]);
+            }
+            for (int i = 0; i < fpgaDataCount; i++)
+            {
+                PgDbContext.Update(FpgaDbData[i]);
+            }
+            // get agg spots from db with session id is same as this session id
+            List<SessionAggSpots> sessionAggSpots = PgDbContext.SessionAggSpots.Where(s => s.SessionInfoId == SessionInfo.SessionId).ToList();
+
+            PgDbContext.SaveChanges();
+
         }
 
     }

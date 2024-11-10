@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using CenterSpace.NMath.Core;
 
 namespace HUREL.PG.NccHelper
-{   
+{
     public enum NccBeamState
     {
         Tuning = 0,
@@ -23,7 +23,7 @@ namespace HUREL.PG.NccHelper
             if (!LoadLogFile(recordFileDir, SpecifFileDir, coeff_x, coeff_y))
             {
                 IsLayerValid = false;
-            };           
+            };
         }
 
         #region Properties
@@ -35,7 +35,8 @@ namespace HUREL.PG.NccHelper
 
         public override string? LayerId
         {
-            get {
+            get
+            {
                 // different by beam state
                 if (NccBeamState == NccBeamState.Normal)
                 {
@@ -60,8 +61,8 @@ namespace HUREL.PG.NccHelper
 
         public NccBeamState NccBeamState { get; private set; }
         public bool IsLayerValid { get; private set; }
-        public int PartNumber { get; private set; }      
-        
+        public int PartNumber { get; private set; }
+
         // ex) tuning 1, 2, resume 1, 2
         public int OrderNumber { get; private set; }
         #endregion
@@ -163,16 +164,25 @@ namespace HUREL.PG.NccHelper
                 return false;
             }
 
-            LayerNumber = layerNumber;
+            LayerNumber = layerNumber + 1;
             PartNumber = partNumber;
             BeamStateNumber = beamStateNumber;
             NccBeamState = state;
+            XdrConverter_Specific data_speicf;
+            XdrConverter_Record data_record;
+            try
+            {
+                Stream xdrConverter_speicf = File.Open(SpecifFileDir, FileMode.Open);
+                data_speicf = new XdrConverter_Specific(xdrConverter_speicf);
 
-            Stream xdrConverter_speicf = File.Open(SpecifFileDir, FileMode.Open);
-            var data_speicf = new XdrConverter_Specific(xdrConverter_speicf);
-
-            Stream xdrConverter_record = File.Open(recordFileDir, FileMode.Open);
-            var data_record = new XdrConverter_Record(xdrConverter_record);
+                Stream xdrConverter_record = File.Open(recordFileDir, FileMode.Open);
+                data_record = new XdrConverter_Record(xdrConverter_record);
+            }
+            catch (IOException ioException)
+            {
+                Debug.WriteLine(ioException);
+                return false;
+            }
 
             #region Add logSpots
             if (data_record.ErrorCheck == false)
@@ -289,8 +299,8 @@ namespace HUREL.PG.NccHelper
     /// Dicom, Plan, Log, PG
     /// </summary>
     public class Ncc
-    {       
-       
+    {
+
         public static NccLogParameter GetNccLogParameter(string configFilePath)
         {
             NccLogParameter logParameter = new NccLogParameter();
@@ -416,8 +426,8 @@ namespace HUREL.PG.NccHelper
         public override string ToString()
         {
             // [Spot, LayerNumber, State], startTime, endTime, XPosition, YPosition
-            
-            return StartTime.ToString("hh:mm:ss:fff") + ", " + EndTime.ToString("hh:mm:ss:fff") + ", " + XPosition.ToString("+00.00;-00.00;+00.00") + ", " + YPosition.ToString("+00.00;-00.00;+00.00") + " [Layer: " + LayerID + "]";            
+
+            return StartTime.ToString("hh:mm:ss:fff") + ", " + EndTime.ToString("hh:mm:ss:fff") + ", " + XPosition.ToString("+00.00;-00.00;+00.00") + ", " + YPosition.ToString("+00.00;-00.00;+00.00") + " [Layer: " + LayerID + "]";
         }
     }
 

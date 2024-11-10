@@ -33,3 +33,7 @@ namespace PG.Orm
         public SessionInfo? SessionInfo { get; set; }  // Should refer to SessionInfo, not Session
     }
 }
+
+
+// CREATE SQL postgres
+

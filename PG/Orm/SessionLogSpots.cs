@@ -25,6 +25,14 @@ namespace PG.Orm
         [Column("spot_sequence_number")]
         public int SpotSequenceNumber { get; set; }
 
+        
+        // Start time
+        [Column("start_time")]
+        public DateTime StartTime { get; set; }
+        // End time
+        [Column("end_time")]
+        public DateTime EndTime { get; set; }
+
         // layer number
         [Column("layer_index")]
         public int LayerIndex { get; set; }        
@@ -45,5 +53,10 @@ namespace PG.Orm
         [Column("position_y")]
         public double PositionY { get; set; }
 
+        // To String
+        public override string ToString()
+        {
+            return $"Id: {Id}, SessionInfoId: {SessionInfoId}, SpotSequenceNumber: {SpotSequenceNumber}, StartTime: {StartTime}, EndTime: {EndTime}, LayerIndex: {LayerIndex}, IsTunning: {IsTunning}, PartIndex: {PartIndex}, ResumeIndex: {ResumeIndex}, PositionX: {PositionX}, PositionY: {PositionY}";
+        }
     }
 }
