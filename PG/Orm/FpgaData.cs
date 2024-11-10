@@ -28,8 +28,8 @@ namespace PG.Orm
         // Foreign Key
         [ForeignKey("SessionInfo")]
         [Column("SessionInfo_id")]
-        public string SessionInfoId { get; set; }
+        public string? SessionInfoId { get; set; }
 
-        public SessionInfo SessionInfo { get; set; }  // Should refer to SessionInfo, not Session
+        public SessionInfo? SessionInfo { get; set; }  // Should refer to SessionInfo, not Session
     }
 }

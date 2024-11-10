@@ -629,7 +629,7 @@ namespace HUREL_PG_GUI.ViewModels
             VMStatus = "Start up ftp server";
             await Task.Run(() =>
             {
-                (Is_FTPstart, VMStatus) = LogFileSync.OpenFtpSession("10.1.30.80", "clinical", "Madne55");
+                (Is_FTPstart, VMStatus) = NccFtp.OpenFtpSession("10.1.30.80", "clinical", "Madne55");
                 Is_LogFileSync = Is_FTPstart;
             });
 

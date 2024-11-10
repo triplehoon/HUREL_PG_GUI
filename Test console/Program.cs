@@ -178,9 +178,29 @@ class TestClass
         }
 
     }
+    // Test NccPgSession
+    static void TestNccPgSession()
+    {
+        // create NccPgSession
+        NccPgSession nccPgSession = new NccPgSession(patientId: "JohnDoe",
+                                                     sessionDescription: "Test session",
+                                                     calibrationFilePath: @"C:\HUREL\PG\MultiSlit\TestLog\calibration\eWindow_230921.mat",
+                                                     pldPath: @"C:\HUREL\PG\MultiSlit\TestLog\data\PLD_1C_ASO.pld",
+                                                     pld3dPath: @"C:\HUREL\PG\MultiSlit\TestLog\data\3DplotRange1C_ASO.pld");
+
+        nccPgSession.StartFtpStream(true);
+
+        // wait for key press
+        Console.WriteLine("Press any key to stop the session");
+        Console.ReadKey();
+        Console.WriteLine("Stop the session");
+        nccPgSession.StopFtpStream();
+    }
     static void Main(string[] args)
     {
-        TestFpgaDaq();
+        TestNccPgSession();
+
+
     }
 
 }

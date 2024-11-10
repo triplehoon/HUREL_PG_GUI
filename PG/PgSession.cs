@@ -1,4 +1,5 @@
 ﻿using PG.Fpga;
+using PG.Orm;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -37,7 +38,7 @@ namespace PG
             {
                 return SessionLog.Last();
             }
-            private set
+            protected set
             {
                 string time = DateTime.Now.ToString("[yyyy-MM-dd HH:mm:ss]");
                 string log = time + " " + value;
@@ -64,28 +65,40 @@ namespace PG
             }
         }
         public string SessionFolder { get; private set; }
-
         public Guid SessionId { get; private set; }
         public string SessionName { get; private set; }
         public string SessionDescription { get; private set; }
         public DateTime SessionStartTime { get; private set; }
         public DateTime? SessionEndTime { get; private set; }
         public string PatientId { get; private set; }
-
         public List<DaqData> FpgaRawData { get; private set; }
+        public SessionInfo? SessionInfo { get; private set; }
+        public PgDbContext PgDbContext { get; private set; }
 
-        public PgSession(eSessionType sessionType, string patientId = "", string sessionDescription = "")
+
+
+        public PgSession(eSessionType sessionType, 
+                         string patientId, 
+                         string sessionDescription
+                         )
         {
             if (patientId == "")
             {
                 patientId = "JohnDoe";
             }
-            SessionName = DateTime.Now.ToString("yyyy-MM-dd-hhmm") + "_" + patientId;
+
+            SessionName = DateTime.Now.ToString("yyyy-MM-dd-HHmm") + "_" + patientId;
             SessionId = Guid.NewGuid();
             SessionDescription = sessionDescription;
             SessionStartTime = DateTime.Now;
             SessionEndTime = null;
             PatientId = patientId;
+
+            // if patient id is longer than 6 digits, truncate it
+            if (PatientId.Length > 6)
+            {
+                PatientId = PatientId.Substring(0, 6);
+            }
             FpgaRawData = new List<DaqData>();
             SessionLog = new List<string>();
             // If the directory does not exist, create it.
@@ -95,6 +108,11 @@ namespace PG
             }
             // create folder with SessionId
             SessionFolder = MAIN_FOLDER + "/" + SessionName;
+
+            if (System.IO.Directory.Exists(SessionFolder))
+            {
+                System.IO.Directory.Delete(SessionFolder, true);
+            }
             System.IO.Directory.CreateDirectory(SessionFolder);
             // create log file
             StreamWriter sw = File.CreateText(SessionFolder + "/" + LOG_FILE_NAME);
@@ -106,8 +124,24 @@ namespace PG
             SessionMessage = "Session Id: " + SessionId.ToString();
             SessionMessage = "Session Type: " + SessionType.ToString();
             Status = eSessionStatus.Ready;
+
+            // create db context
+            PgDbContext = new PgDbContext();
+            // create session info
+          
+            SessionInfo = new SessionInfo();
+            SessionInfo.SessionId = SessionId.ToString();
+            SessionInfo.PatientNumber = PatientId;
+            SessionInfo.Date = SessionStartTime;
+            SessionInfo.IsRunning = false;
+            this.PgDbContext.SessionInfos.Add(SessionInfo);
+
+            this.PgDbContext.SaveChanges();
+
         }
-        public void StartSession()
+
+        private CancellationToken sessionCancelToken = new CancellationToken();
+        public virtual void StartSession()
         {
             Status = eSessionStatus.Running;
             SessionStartTime = DateTime.UtcNow;
@@ -132,11 +166,34 @@ namespace PG
 
                 Task.Delay(100).Wait();
             }
-
+            sessionCancelToken = new CancellationToken();
             // update default session info to db
         }
+        // Task to run in the background
+        // 1. Dump fpga data to db
+        // 2. Dump log to db
+        // 3. get session data from db
+        // 4. update session info to db
 
-        public void StopSession()
+        private async Task UpdateFpgaDataToDbTask(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                List<DaqData> daqDatas = CruxellWrapper.GetDaqData();
+
+                if (daqDatas.Count > FpgaRawData.Count)
+                {
+                    for (int i = FpgaRawData.Count; i < daqDatas.Count; ++i)
+                    {
+                        FpgaRawData.Add(daqDatas[i]);
+                    }
+                }
+
+
+                await Task.Delay(100);
+            }
+        }
+        public virtual void StopSession()
         {
             Status = eSessionStatus.Stopped;
             SessionEndTime = DateTime.UtcNow;

@@ -20,6 +20,9 @@ namespace PG.Orm
 
         public DbSet<FpgaData> RawDataList { get; set; }
         public DbSet<SessionInfo> SessionInfos { get; set; }
+        public DbSet<SessionAggSpots> SessionAggSpots { get; set; }
+        public DbSet<SessionLogSpots> SessionLogSpots { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
@@ -39,6 +42,8 @@ namespace PG.Orm
             modelBuilder.Entity<SessionInfo>().ToTable("sessioninfo");
             // mapping for FpgaData table set table name
             modelBuilder.Entity<FpgaData>().ToTable("fpgadata");
+            modelBuilder.Entity<SessionAggSpots>().ToTable("sessionaggspots");
+            modelBuilder.Entity<SessionLogSpots>().ToTable("sessionlogspots");
         }
     }
 }

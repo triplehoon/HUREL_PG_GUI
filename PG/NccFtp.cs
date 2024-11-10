@@ -9,37 +9,40 @@ using System.Threading;
 
 namespace HUREL.PG.NccHelper
 {
-    public static class LogFileSync
+    public static class NccFtp
     {
         public static bool IsFtpStart
         {
             get;
             private set;
-        }      
+        }
         public delegate void SyncAndDownloadLogHandler(string fileName);
         public static event SyncAndDownloadLogHandler? NewLogFileReceived;
 
 
         private static WinSCP.Session? ftpSession = null;
         private static bool IsSessionOpen = false;
-
-        public static (bool, string) OpenFtpSession(string hostName = "10.1.30.80", string userName = "clinical", string passWord = "Madne55")
+        private static SessionOptions? sessionOptions;
+        public static (bool, string) OpenFtpSession(
+            SessionOptions? _sessionOptions = null)
         {
-            SessionOptions sessionOptions = new SessionOptions
+            if (_sessionOptions == null)
             {
-                GiveUpSecurityAndAcceptAnySshHostKey = true,
-
-                Protocol = Protocol.Sftp,
-                HostName = hostName,
-                UserName = userName,
-                Password = passWord,
-                PortNumber = 22,
-            };
-
+                _sessionOptions = new SessionOptions
+                {
+                    GiveUpSecurityAndAcceptAnySshHostKey = true,
+                    HostName = "10.1.30.80",
+                    UserName = "clinical",
+                    Password = "Madne55",
+                    PortNumber = 22,
+                    Protocol = Protocol.Sftp
+                };
+            }
+            sessionOptions = _sessionOptions;
             try
             {
                 ftpSession = new WinSCP.Session();
-                ftpSession.Open(sessionOptions);
+                ftpSession.Open(_sessionOptions);
                 IsSessionOpen = true;
                 return (true, "Success");
             }
@@ -56,6 +59,8 @@ namespace HUREL.PG.NccHelper
         {
             if (IsSessionOpen)
             {
+                IsFtpStart = false;
+                Thread.Sleep(1000);
                 try
                 {
                     ftpSession?.Close();
@@ -68,8 +73,10 @@ namespace HUREL.PG.NccHelper
             }
 
         }
-        
-        public static async Task SyncAndDownloadLogFile(string localDirectory, bool testMode = false)
+
+        public static async Task SyncAndDownloadLogFile(
+            string localDirectory,
+            string remoteDirectory = "/PBSdata/test/clinical/tr3/planId/beamId/fractionId")
         {
 
 
@@ -78,18 +85,14 @@ namespace HUREL.PG.NccHelper
             if (!IsSessionOpen)
             {
                 Trace.WriteLine("SyncAndDownloadLogFile Started");
-                IsFtpStart = false; 
-                return ;
+                IsFtpStart = false;
+                return;
             }
 
             IsFtpStart = true;
             // Connect to Server
-            string remotePath = "/PBSdata/test/clinical/tr3/planId/beamId/fractionId";
-            if (testMode)
-            {
-                remotePath = "/home/csh/PBSdata/test/clinical/tr3/planId/beamId/fractionId";
-            }
-            //
+            string remotePath = remoteDirectory;
+
             //string remotePath = "";
             List<RemoteFileInfo> checkedRemoteFiles = new List<RemoteFileInfo>();
             Trace.WriteLine("SyncAndDownloadLogFile Started");
@@ -98,9 +101,10 @@ namespace HUREL.PG.NccHelper
                 while (IsFtpStart)
                 {
                     try
-                    {   if (ftpSession == null)
+                    {
+                        if (ftpSession == null)
                         {
-                            IsFtpStart = false; 
+                            IsFtpStart = false;
                             return;
                         }
                         RemoteDirectoryInfo directory = ftpSession.ListDirectory(remotePath);
@@ -141,6 +145,12 @@ namespace HUREL.PG.NccHelper
                     {
                         Trace.WriteLine(ex.ToString());
                         Thread.Sleep(1);
+
+                        // check scp session
+                        if (ftpSession != null && !ftpSession.Opened)
+                        {
+                            ftpSession.Open(sessionOptions);
+                        }
                     }
                 }
             });
@@ -148,7 +158,7 @@ namespace HUREL.PG.NccHelper
             Trace.WriteLine($"FTP Finished");
             Trace.WriteLine($"");
 
-            return ;
+            return;
         }
         public static void StopSyncAndDownloadLogFile()
         {
